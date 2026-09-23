@@ -257,7 +257,7 @@ function sendReminder(){
 
 
 const moduleDefs={
- milestones:{title:'Milestones',sub:'Key project dates and deliverables.',prefix:'MS',fields:[['name','Milestone','text'],['stream','Stream','text'],['date','Target date','date'],['owner','Owner','text'],['status','Status','select:Planned|Ongoing|Completed|Delayed']]},
+ milestones:{title:'Milestones',sub:'Key project dates and deliverables.',prefix:'MS',fields:[['level','Project level / order','number'],['name','Milestone','text'],['stream','Stream','text'],['date','Target date','date'],['owner','Owner','text'],['status','Status','select:Planned|Ongoing|Completed|Delayed']]},
  raid:{title:'RAID Log',sub:'Risks, assumptions, issues and dependencies.',prefix:'RAID',fields:[['type','Type','select:Risk|Assumption|Issue|Dependency'],['title','Title','text'],['impact','Impact','select:High|Medium|Low'],['probability','Probability','select:High|Medium|Low'],['owner','Owner','text'],['due','Due date','date'],['mitigation','Mitigation / action','textarea'],['status','Status','select:Open|Monitoring|Closed']]},
  decisions:{title:'Decision Log',sub:'Document key project decisions and rationale.',prefix:'DEC',fields:[['decision','Decision','text'],['stream','Stream','text'],['date','Decision date','date'],['owner','Decision owner','text'],['rationale','Rationale','textarea'],['linkedAction','Linked action','text'],['status','Status','select:Proposed|Approved|Superseded']]},
  testing:{title:'Testing / UAT',sub:'Track test scenarios, results and defects.',prefix:'TST',fields:[['scenario','Test scenario','text'],['stream','Stream','text'],['tester','Tester','text'],['planned','Planned date','date'],['result','Result','select:Not Started|Pass|Fail|Blocked'],['defect','Defect / comment','textarea']]},
@@ -265,11 +265,11 @@ const moduleDefs={
 };
 let moduleData=JSON.parse(localStorage.getItem('genioPCCModules')||'{}');Object.keys(moduleDefs).forEach(k=>moduleData[k]=moduleData[k]||[]);
 const agreedMilestones=[
- {id:'MS-001',name:'Physical Worksession Benelux / DACH',stream:'Project',date:'2026-09-28',owner:'',status:'Planned'},
- {id:'MS-002',name:'Business Readiness',stream:'Project',date:'2026-12-31',owner:'',status:'Planned'},
- {id:'MS-003',name:'JDE Benelux Go-Live',stream:'Project',date:'2027-02-03',owner:'',status:'Planned'}
+ {id:'MS-001',level:'4',name:'Physical Worksession Benelux / DACH',stream:'Project',date:'2026-09-28',owner:'',status:'Planned'},
+ {id:'MS-002',level:'',name:'Business Readiness',stream:'Project',date:'2026-12-31',owner:'',status:'Planned'},
+ {id:'MS-003',level:'10',name:'JDE Benelux Go-Live',stream:'Project',date:'2027-02-03',owner:'',status:'Planned'}
 ];
-let milestonesChanged=false;agreedMilestones.forEach(m=>{if(!moduleData.milestones.some(x=>x.name===m.name)){moduleData.milestones.push({...m});milestonesChanged=true}});if(milestonesChanged)localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));
+let milestonesChanged=false;agreedMilestones.forEach(m=>{const existing=moduleData.milestones.find(x=>x.name===m.name);if(!existing){moduleData.milestones.push({...m});milestonesChanged=true}else if(m.level&&!existing.level){existing.level=m.level;milestonesChanged=true}});if(milestonesChanged)localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));
 let activeModule='',editModuleIndex=null;
 function hideWork(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='none';trackerTable.style.display='none'}
 function showModule(k){hideWork();activeModule=k;moduleSection.classList.add('show');renderModule();moduleSection.scrollIntoView({behavior:'smooth'})}
