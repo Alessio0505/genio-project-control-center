@@ -57,7 +57,8 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 @media(max-width:430px){.cards{grid-template-columns:1fr 1fr}.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}.module-grid{grid-template-columns:1fr 1fr}.eyebrow{font-size:9px}}
 .phase-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 18px}.phase-card{background:#fff;border:1px solid var(--line);border-left:4px solid #315f8d;border-radius:11px;padding:12px;cursor:pointer}.phase-card:hover{box-shadow:0 3px 12px #00000010}.phase-card b{display:block;font-size:12px}.phase-card small{color:var(--muted)}.phase-progress{height:5px;background:#eee;border-radius:9px;margin-top:8px;overflow:hidden}.phase-progress i{display:block;height:100%;background:#315f8d}@media(max-width:900px){.phase-strip{display:flex;overflow:auto;padding-bottom:4px}.phase-card{min-width:210px;flex:0 0 210px}}.owner-checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;border:1px solid var(--line);border-radius:8px;padding:9px;min-height:44px;background:#fff}.owner-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#faf9f6;font-size:12px}.owner-chip input{width:auto;margin:0}.team-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#f1eee6;font-size:10px;color:#665}
 .timeline-check{display:flex;align-items:center;gap:7px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px;font-weight:600;white-space:nowrap}.timeline-check input{width:auto;margin:0}@media(max-width:700px){.timeline-check{white-space:normal}}
-.milestone-marker{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #d32f2f;z-index:5}.milestone-marker:before{content:'◆';position:absolute;top:-9px;left:-7px;color:#d32f2f;font-size:14px}.milestone-marker span{position:absolute;top:8px;left:7px;white-space:nowrap;background:#fff5f5;border:1px solid #e2a0a0;border-radius:6px;padding:3px 6px;font-size:10px;font-weight:700;color:#9f1f1f;z-index:6}</style>
+.milestone-marker{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #d32f2f;z-index:5}.milestone-marker:before{content:'◆';position:absolute;top:-9px;left:-7px;color:#d32f2f;font-size:14px}.milestone-marker span{position:absolute;top:8px;left:7px;white-space:nowrap;background:#fff5f5;border:1px solid #e2a0a0;border-radius:6px;padding:3px 6px;font-size:10px;font-weight:700;color:#9f1f1f;z-index:6}.stream-percent{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 2px;border-bottom:1px solid #ececec}.stream-percent:last-child{border-bottom:0}.stream-percent b{font-size:13px}.stream-percent strong{font-size:18px;min-width:52px;text-align:right;color:#1f2937}
+</style>
 </head>
 <body>
 <div class="mobile-head"><div class="mobile-brand"><span class="mobile-g">G</span><span>GENIO</span></div><button class="menu-btn" onclick="toggleMobileNav()" aria-label="Open menu">☰</button></div><div class="nav-shade" id="navShade" onclick="toggleMobileNav(false)"></div>
@@ -191,17 +192,21 @@ function refresh(){
  renderKpis(); renderStreams(); renderAttention(); renderPhases();
 }
 function renderKpis(){
- const total=data.length, done=data.filter(x=>/finished|completed/i.test(x.status)).length, open=total-done, high=data.filter(x=>x.priority==='High'&&!/finished/i.test(x.status)).length, delayed=data.filter(x=>x.health==='Delayed'&&!/finished/i.test(x.status)).length;
+ const total=data.length, done=data.filter(x=>/finished|completed/i.test(x.status)).length, open=total-done, high=data.filter(x=>x.priority==='High'&&!/finished/i.test(x.status)).length, delayed=needsAttentionItems().length;
  const progress=total?Math.round(done/total*100):0;
  kpis.innerHTML=[[progress+'%','Progress'],[open,'Open actions'],[high,'High priority'],[delayed,'Needs attention'],[new Set(data.map(x=>x.stream).filter(Boolean)).size,'Streams']].map(x=>`<div class="card kpi"><span>${x[1]}</span><strong>${x[0]}</strong></div>`).join('');
 }
 function renderStreams(){
  const names=[...new Set(data.map(x=>x.stream).filter(Boolean))].sort();
- streams.innerHTML=names.map(n=>{let a=data.filter(x=>x.stream===n),d=a.filter(x=>/finished/i.test(x.status)).length,p=a.length?Math.round(d/a.length*100):0;return `<div class="barrow"><b>${esc(n)}</b><div class="bar"><i style="width:${p}%"></i></div><span>${p}%</span></div>`}).join('');
+ streams.innerHTML=names.map(n=>{const a=data.filter(x=>x.stream===n),d=a.filter(x=>/finished|completed/i.test(x.status)).length,p=a.length?Math.round(d/a.length*100):0;return `<div class="stream-percent"><b>${esc(n)}</b><strong>${p}%</strong></div>`}).join('');
+}
+function needsAttentionItems(){
+ const today=new Date();today.setHours(0,0,0,0);
+ return data.filter(x=>x.priority==='High'&&!/finished|completed/i.test(x.status)&&normalizeDate(x.due)&&new Date(x.due+'T00:00:00')<=today).sort((a,b)=>a.due.localeCompare(b.due));
 }
 function renderAttention(){
- const a=data.filter(x=>!/finished/i.test(x.status)&&(x.priority==='High'||x.health!=='On Track')).slice(0,6);
- attention.innerHTML=a.map(x=>`<div class="attn-item" onclick="openItem('${x.id}')"><span><b>${esc(x.topic)}</b><br><small>${esc(x.owner||'Unassigned')}</small></span><span class="health-${x.health.replaceAll(' ','-')}">● ${x.health}</span></div>`).join('')||'<span class="sub">No critical items.</span>';
+ const a=needsAttentionItems().slice(0,6);
+ attention.innerHTML=a.map(x=>`<div class="attn-item" onclick="openItem('${x.id}')"><span><b>${esc(x.topic)}</b><br><small>${esc(x.owner||'Unassigned')} · Due ${esc(x.due)}</small></span><span class="pill high">High</span></div>`).join('')||'<span class="sub">No high-priority actions due or overdue.</span>';
 }
 function fillFilters(){ phaseFilter.innerHTML='<option value="">All project blocks</option>'+projectPhases.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
  [...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>streamFilter.add(new Option(v,v)));
