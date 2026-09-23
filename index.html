@@ -57,7 +57,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 @media(max-width:430px){.cards{grid-template-columns:1fr 1fr}.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}.module-grid{grid-template-columns:1fr 1fr}.eyebrow{font-size:9px}}
 .phase-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 18px}.phase-card{background:#fff;border:1px solid var(--line);border-left:4px solid #315f8d;border-radius:11px;padding:12px;cursor:pointer}.phase-card:hover{box-shadow:0 3px 12px #00000010}.phase-card b{display:block;font-size:12px}.phase-card small{color:var(--muted)}.phase-progress{height:5px;background:#eee;border-radius:9px;margin-top:8px;overflow:hidden}.phase-progress i{display:block;height:100%;background:#315f8d}@media(max-width:900px){.phase-strip{display:flex;overflow:auto;padding-bottom:4px}.phase-card{min-width:210px;flex:0 0 210px}}.owner-checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;border:1px solid var(--line);border-radius:8px;padding:9px;min-height:44px;background:#fff}.owner-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#faf9f6;font-size:12px}.owner-chip input{width:auto;margin:0}.team-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#f1eee6;font-size:10px;color:#665}
 .timeline-check{display:flex;align-items:center;gap:7px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px;font-weight:600;white-space:nowrap}.timeline-check input{width:auto;margin:0}@media(max-width:700px){.timeline-check{white-space:normal}}
-</style>
+.milestone-marker{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #b68b2d;z-index:5}.milestone-marker:before{content:'◆';position:absolute;top:-9px;left:-7px;color:#b68b2d;font-size:14px}.milestone-marker span{position:absolute;top:8px;left:7px;white-space:nowrap;background:#fff8e7;border:1px solid #d9bd78;border-radius:6px;padding:3px 6px;font-size:10px;font-weight:700;color:#4a3b17;z-index:6}</style>
 </head>
 <body>
 <div class="mobile-head"><div class="mobile-brand"><span class="mobile-g">G</span><span>GENIO</span></div><button class="menu-btn" onclick="toggleMobileNav()" aria-label="Open menu">☰</button></div><div class="nav-shade" id="navShade" onclick="toggleMobileNav(false)"></div>
@@ -98,7 +98,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 <select id="tlStream" aria-label="Stream"><option value="">All streams</option></select>
 <select id="tlOwner" aria-label="Owner"><option value="">All owners</option></select>
 <label class="timeline-check"><input type="checkbox" id="tlProgress" checked> Show progress until today</label>
-<label class="timeline-check"><input type="checkbox" id="tlHistory" checked> Show full historical process</label>
+<label class="timeline-check"><input type="checkbox" id="tlHistory" checked> Show full historical process</label><label class="timeline-check"><input type="checkbox" id="tlMilestones" checked> Show milestones</label>
 </div>
  <div class="gantt"><div class="gantt-grid" id="ganttGrid"></div></div></div>
  </section>
@@ -285,9 +285,11 @@ function showTimeline(){hideWork();timelineSection.classList.add('show');renderT
 function showTracker(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();trackerToolbar.scrollIntoView({behavior:'smooth'})}
 function renderTimeline(){
  const levelEl=document.getElementById('tlLevel'),streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),progressEl=document.getElementById('tlProgress'),historyEl=document.getElementById('tlHistory'),grid=document.getElementById('ganttGrid');
- const level=levelEl?levelEl.value:'block',stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'',showProgress=progressEl?progressEl.checked:true,showHistory=historyEl?historyEl.checked:true;
+ const milestoneEl=document.getElementById('tlMilestones');
+ const level=levelEl?levelEl.value:'block',stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'',showProgress=progressEl?progressEl.checked:true,showHistory=historyEl?historyEl.checked:true,showMilestones=milestoneEl?milestoneEl.checked:true;
  const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));
  const projectStart=utcDate('2026-03-31'),projectEnd=utcDate('2027-03-31');
+ const milestones=[{name:'Physical Worksession Benelux / DACH',date:'2026-09-28'},{name:'Business Readiness',date:'2026-12-31'},{name:'JDE Benelux Go-Live',date:'2027-02-03'}];
  const filtered=data.filter(r=>(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner)));
  let rows=[];
  if(level==='block'){
@@ -307,7 +309,7 @@ function renderTimeline(){
  const levelName=level==='block'?'Project Blocks':level==='stream'?'Streams':'Topics';
  let head='<div class="gantt-head"><div class="gantt-label"><b>'+levelName+'</b><small>'+rows.length+' visible</small></div><div class="gantt-track">';
  for(let i=0;i<weeks;i++){let d=new Date(alignedMin);d.setUTCDate(d.getUTCDate()+i*7);head+=`<span class="week" style="left:${i*ww}%;width:${ww}%"><strong>W${isoWeek(d)}</strong>${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'})}</span>`}
- const tp=((today-alignedMin)/86400000/days)*100;if(showProgress&&tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;head+='</div></div>';
+ const tp=((today-alignedMin)/86400000/days)*100;if(showProgress&&tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;if(showMilestones)head+=milestones.map(m=>{const d=utcDate(m.date),p=((d-alignedMin)/86400000/days)*100;return p>=0&&p<=100?`<i class="milestone-marker" style="left:${p}%" title="${esc(m.name)} · ${m.date}"><span>${esc(m.name)}</span></i>`:''}).join('');head+='</div></div>';
  const visibleRows=rows.filter(r=>utcDate(r.end)>=min&&utcDate(r.start)<=max);
  grid.innerHTML=head+(visibleRows.map(r=>{const s=utcDate(r.start),e=utcDate(r.end);let l=Math.max(0,(s-alignedMin)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.label)}</b><small>${esc(r.sub||'')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.label)}: ${r.start} → ${r.end}">${esc(r.label)}</span>${showProgress&&tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No timeline items match the selected filters.</div>');
 }
@@ -322,6 +324,6 @@ function filterStatus(s){statusFilter.value=s;refresh();document.querySelector('
 ['search','phaseFilter','streamFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
 
-['tlLevel','tlStream','tlOwner','tlProgress','tlHistory'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
+['tlLevel','tlStream','tlOwner','tlProgress','tlHistory','tlMilestones'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
 </script>
 </body></html>
