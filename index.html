@@ -34,7 +34,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 .modalbox{background:#fff;width:min(760px,96vw);max-height:90vh;overflow:auto;border-radius:16px;padding:24px} .modalhead{display:flex;justify-content:space-between;gap:10px}
 .close{border:0;background:#eee;border-radius:50%;width:32px;height:32px;cursor:pointer} .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px} label{font-size:11px;color:#666} label input,label select,label textarea{width:100%;margin-top:5px} textarea{min-height:80px;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit}
 .full{grid-column:1/-1} .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.timeline-section{display:none;margin:18px 0}.timeline-section.show{display:block}.timeline-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.gantt{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}.gantt-grid{min-width:1300px}.gantt-head,.gantt-row{display:grid;grid-template-columns:290px 1fr}.gantt-label{padding:9px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;min-width:0}.gantt-label b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gantt-label small{color:var(--muted)}.gantt-track{position:relative;height:50px;border-bottom:1px solid var(--line);background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:var(--week-width) 100%}.gantt-head .gantt-track{height:52px;background:#faf9f6}.week{position:absolute;top:0;height:100%;border-left:1px solid #e7e4dc;padding:6px 4px;font-size:9px;color:#777}.week strong{display:block;color:#333;font-size:10px}.gbar{position:absolute;top:13px;height:24px;border-radius:6px;background:#c99a45;min-width:5px;padding:5px 7px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden}.gbar.finished{background:#dbece2;color:#286443}.gbar.delayed{background:#f5dddd;color:#8e3028}.gbar.risk{background:#f5ead3;color:#825f21}.today-line{position:absolute;top:0;bottom:0;width:2px;background:#111;z-index:3}.today-line:before{content:'TODAY';position:absolute;top:1px;left:4px;font-size:8px;font-weight:800}.month-band{position:absolute;bottom:4px;font-size:9px;font-weight:700;color:#555}
+.module-section{display:none;margin:18px 0}.module-section.show{display:block}.module-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.mini-kpi{padding:13px;border:1px solid var(--line);border-radius:10px;background:#faf9f6}.mini-kpi b{font-size:21px;display:block}.module-table{overflow:auto}.module-table table{min-width:900px}.timeline-section{display:none;margin:18px 0}.timeline-section.show{display:block}.timeline-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.gantt{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}.gantt-grid{min-width:1300px}.gantt-head,.gantt-row{display:grid;grid-template-columns:290px 1fr}.gantt-label{padding:9px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;min-width:0}.gantt-label b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gantt-label small{color:var(--muted)}.gantt-track{position:relative;height:50px;border-bottom:1px solid var(--line);background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:var(--week-width) 100%}.gantt-head .gantt-track{height:52px;background:#faf9f6}.week{position:absolute;top:0;height:100%;border-left:1px solid #e7e4dc;padding:6px 4px;font-size:9px;color:#777}.week strong{display:block;color:#333;font-size:10px}.gbar{position:absolute;top:13px;height:24px;border-radius:6px;background:#c99a45;min-width:5px;padding:5px 7px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden}.gbar.finished{background:#dbece2;color:#286443}.gbar.delayed{background:#f5dddd;color:#8e3028}.gbar.risk{background:#f5ead3;color:#825f21}.today-line{position:absolute;top:0;bottom:0;width:2px;background:#111;z-index:3}.today-line:before{content:'TODAY';position:absolute;top:1px;left:4px;font-size:8px;font-weight:800}.month-band{position:absolute;bottom:4px;font-size:9px;font-weight:700;color:#555}
 @media(max-width:900px){.app{grid-template-columns:1fr}aside{display:none}main{padding:20px}.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
 </style>
 </head>
@@ -47,11 +47,11 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <button onclick="showTracker()"><span class="dot">▣</span>Project Tracker</button>
   <button onclick="showTimeline()"><span class="dot">━</span>Timeline</button>
   <button onclick="filterStatus('Outstanding')"><span class="dot">✓</span>Open Actions</button>
-  <button><span class="dot">◆</span>Milestones</button>
-  <button><span class="dot">⚠</span>RAID</button>
-  <button><span class="dot">◇</span>Decisions</button>
-  <button><span class="dot">◫</span>Testing</button>
-  <button><span class="dot">🚀</span>Go-Live</button>
+  <button onclick="showModule('milestones')"><span class="dot">◆</span>Milestones</button>
+  <button onclick="showModule('raid')"><span class="dot">⚠</span>RAID</button>
+  <button onclick="showModule('decisions')"><span class="dot">◇</span>Decisions</button>
+  <button onclick="showModule('testing')"><span class="dot">◫</span>Testing</button>
+  <button onclick="showModule('golive')"><span class="dot">🚀</span>Go-Live</button>
   <button onclick="openTeamAdmin()"><span class="dot">👥</span>Team & Admin</button>
  </nav>
  <div class="aside-foot">GENIO CONSULT<br>Better Thinking. Greater Results.</div>
@@ -63,7 +63,13 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <div class="card"><div class="section-title">Progress by stream</div><div class="streams" id="streams"></div></div>
   <div class="card"><div class="section-title">Needs attention</div><div class="attn" id="attention"></div></div>
  </div>
- <section class="timeline-section" id="timelineSection">
+ <section class="module-section" id="moduleSection">
+ <div class="card"><div class="module-head"><div><div class="eyebrow" id="moduleEyebrow">PROJECT CONTROL</div><div class="section-title" id="moduleTitle" style="font-size:20px;margin:4px 0"></div><div class="sub" id="moduleSub"></div></div><button class="btn gold" id="moduleAdd">+ Add</button></div>
+ <div class="module-grid" id="moduleKpis"></div>
+ <div class="module-table"><table><thead id="moduleHead"></thead><tbody id="moduleBody"></tbody></table></div></div>
+ </section>
+ <div class="modal" id="moduleModal"><div class="modalbox"><div class="modalhead"><div><div class="eyebrow">PROJECT CONTROL</div><h2 id="moduleModalTitle"></h2></div><button class="close" onclick="moduleModal.classList.remove('show')">×</button></div><div class="formgrid" id="moduleForm"></div><div class="actions"><button class="btn gold" onclick="saveModuleItem()">Save</button></div></div></div>
+<section class="timeline-section" id="timelineSection">
  <div class="card"><div class="section-title">Project Timeline · Weekly Gantt</div><div class="sub" style="margin-bottom:12px">Actions with a Start Date and Due Date are shown across project weeks. The vertical line marks today.</div>
  <div class="timeline-toolbar"><select id="tlStream"><option value="">All streams</option></select><select id="tlOwner"><option value="">All owners</option></select><button class="btn" onclick="renderTimeline()">Refresh timeline</button></div>
  <div class="gantt"><div class="gantt-grid" id="ganttGrid"></div></div></div>
@@ -184,12 +190,34 @@ function sendReminder(){
  if(!emails.length){alert('No email address is linked to this action owner yet. Add the owner in Team & Admin first.');return}
  location.href=`mailto:${emails.map(encodeURIComponent).join(',')}?subject=${subject}&body=${body}`;
 }
+
+const moduleDefs={
+ milestones:{title:'Milestones',sub:'Key project dates and deliverables.',prefix:'MS',fields:[['name','Milestone','text'],['stream','Stream','text'],['date','Target date','date'],['owner','Owner','text'],['status','Status','select:Planned|Ongoing|Completed|Delayed']]},
+ raid:{title:'RAID Log',sub:'Risks, assumptions, issues and dependencies.',prefix:'RAID',fields:[['type','Type','select:Risk|Assumption|Issue|Dependency'],['title','Title','text'],['impact','Impact','select:High|Medium|Low'],['probability','Probability','select:High|Medium|Low'],['owner','Owner','text'],['due','Due date','date'],['mitigation','Mitigation / action','textarea'],['status','Status','select:Open|Monitoring|Closed']]},
+ decisions:{title:'Decision Log',sub:'Document key project decisions and rationale.',prefix:'DEC',fields:[['decision','Decision','text'],['stream','Stream','text'],['date','Decision date','date'],['owner','Decision owner','text'],['rationale','Rationale','textarea'],['linkedAction','Linked action','text'],['status','Status','select:Proposed|Approved|Superseded']]},
+ testing:{title:'Testing / UAT',sub:'Track test scenarios, results and defects.',prefix:'TST',fields:[['scenario','Test scenario','text'],['stream','Stream','text'],['tester','Tester','text'],['planned','Planned date','date'],['result','Result','select:Not Started|Pass|Fail|Blocked'],['defect','Defect / comment','textarea']]},
+ golive:{title:'Go-Live Control',sub:'Readiness and cutover checklist for February 2027.',prefix:'GL',fields:[['item','Readiness item','text'],['stream','Stream','text'],['owner','Owner','text'],['due','Due date','date'],['critical','Critical','select:Yes|No'],['status','Status','select:Not Started|In Progress|Ready|Blocked'],['comment','Comment','textarea']]}
+};
+let moduleData=JSON.parse(localStorage.getItem('genioPCCModules')||'{}');Object.keys(moduleDefs).forEach(k=>moduleData[k]=moduleData[k]||[]);
+let activeModule='',editModuleIndex=null;
+function hideWork(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='none';trackerTable.style.display='none'}
+function showModule(k){hideWork();activeModule=k;moduleSection.classList.add('show');renderModule();moduleSection.scrollIntoView({behavior:'smooth'})}
+function renderModule(){const d=moduleDefs[activeModule],a=moduleData[activeModule];moduleTitle.textContent=d.title;moduleSub.textContent=d.sub;moduleAdd.textContent='+ Add '+d.prefix;moduleAdd.onclick=()=>openModuleItem();
+ const statuses=a.map(x=>x.status||x.result||'Open'),closed=statuses.filter(x=>/completed|closed|approved|pass|ready/i.test(x)).length,attention=statuses.filter(x=>/delayed|blocked|fail/i.test(x)).length;
+ moduleKpis.innerHTML=[['Total',a.length],['Completed / Ready',closed],['Needs attention',attention],['Open',Math.max(0,a.length-closed)]].map(x=>`<div class="mini-kpi"><span class="sub">${x[0]}</span><b>${x[1]}</b></div>`).join('');
+ moduleHead.innerHTML='<tr><th>ID</th>'+d.fields.slice(0,6).map(f=>'<th>'+esc(f[1])+'</th>').join('')+'<th></th></tr>';
+ moduleBody.innerHTML=a.map((x,i)=>'<tr><td><b>'+esc(x.id)+'</b></td>'+d.fields.slice(0,6).map(f=>'<td>'+esc(x[f[0]]||'')+'</td>').join('')+`<td><button class="btn" onclick="openModuleItem(${i})">Edit</button> <button class="btn" onclick="deleteModuleItem(${i})">Delete</button></td></tr>`).join('')||'<tr><td colspan="8" class="sub">No records yet. Use the Add button to start.</td></tr>';
+}
+function openModuleItem(i=null){editModuleIndex=i;const d=moduleDefs[activeModule],x=i===null?{}:moduleData[activeModule][i];moduleModalTitle.textContent=(i===null?'New ':'Edit ')+d.title.replace(/s$/,'');
+ moduleForm.innerHTML=d.fields.map(f=>{const [key,label,type]=f,v=x[key]||'';if(type==='textarea')return `<label class="full">${label}<textarea data-mf="${key}">${esc(v)}</textarea></label>`;if(type.startsWith('select:'))return `<label>${label}<select data-mf="${key}">${type.slice(7).split('|').map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select></label>`;return `<label>${label}<input data-mf="${key}" type="${type}" value="${esc(v)}"></label>`}).join('');moduleModal.classList.add('show')}
+function saveModuleItem(){const d=moduleDefs[activeModule],obj={};moduleForm.querySelectorAll('[data-mf]').forEach(el=>obj[el.dataset.mf]=el.value);if(editModuleIndex===null){obj.id=d.prefix+'-'+String(moduleData[activeModule].length+1).padStart(3,'0');moduleData[activeModule].push(obj)}else{obj.id=moduleData[activeModule][editModuleIndex].id;moduleData[activeModule][editModuleIndex]=obj}localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));moduleModal.classList.remove('show');renderModule()}
+function deleteModuleItem(i){if(confirm('Delete this record?')){moduleData[activeModule].splice(i,1);localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));renderModule()}}
 function normalizeDate(v){if(!v)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;const m=String(v).match(/^(\d{1,2})-([A-Za-z]{3})$/);if(!m)return '';const mon={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sept:'09',Sep:'09',Oct:'10',Nov:'11',Dec:'12'}[m[2]];if(!mon)return '';return '2026-'+mon+'-'+String(m[1]).padStart(2,'0')}
 function utcDate(s){const a=s.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]))}
 function monday(d){const x=new Date(d),day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day);return x}
 function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
-function showTimeline(){timelineSection.classList.add('show');trackerToolbar.style.display='none';trackerTable.style.display='none';renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
-function showTracker(){timelineSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerToolbar.scrollIntoView({behavior:'smooth'})}
+function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
+function showTracker(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerToolbar.scrollIntoView({behavior:'smooth'})}
 function renderTimeline(){
  const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!tlStream.value||r.stream===tlStream.value)&&(!tlOwner.value||ownerNames(r).includes(tlOwner.value)));
  const fallbackStart=utcDate('2026-04-01'),fallbackEnd=utcDate('2027-02-28');
