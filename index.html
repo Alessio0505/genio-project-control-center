@@ -106,7 +106,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <label>Priority<select id="fPriority"><option>High</option><option>Medium</option><option>Low</option></select></label>
   <label>Start date<input id="fStart" type="date"></label><label>Due date<input id="fDue" type="date"></label>
   <label>Status<select id="fStatus"><option>Outstanding</option><option>Ongoing</option><option>Finished</option><option>Blocked</option></select></label>
-  <label>Due date<input id="fDue"></label><label>Health<select id="fHealth"><option>On Track</option><option>At Risk</option><option>Delayed</option></select></label>
+  <label>Health<select id="fHealth"><option>On Track</option><option>At Risk</option><option>Delayed</option></select></label>
   <label class="full">Description<textarea id="fDesc"></textarea></label>
   <label class="full">Action plan / solution<textarea id="fAction"></textarea></label>
  </div>
@@ -224,7 +224,7 @@ function showTracker(){timelineSection.classList.remove('show');moduleSection.cl
 function renderTimeline(){
  const streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),grid=document.getElementById('ganttGrid');
  const stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'';
- const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner));
+ const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner)));
  const fallbackStart=utcDate('2026-04-01'),fallbackEnd=utcDate('2027-02-28');
  let min=rows.length?new Date(Math.min(...rows.map(r=>utcDate(normalizeDate(r.start))))):fallbackStart,max=rows.length?new Date(Math.max(...rows.map(r=>utcDate(normalizeDate(r.due))))):fallbackEnd;
  min=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=(max-min)/86400000,weeks=Math.ceil(days/7),ww=100/weeks;
