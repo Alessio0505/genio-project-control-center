@@ -56,6 +56,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 }
 @media(max-width:430px){.cards{grid-template-columns:1fr 1fr}.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}.module-grid{grid-template-columns:1fr 1fr}.eyebrow{font-size:9px}}
 .phase-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 18px}.phase-card{background:#fff;border:1px solid var(--line);border-left:4px solid #315f8d;border-radius:11px;padding:12px;cursor:pointer}.phase-card:hover{box-shadow:0 3px 12px #00000010}.phase-card b{display:block;font-size:12px}.phase-card small{color:var(--muted)}.phase-progress{height:5px;background:#eee;border-radius:9px;margin-top:8px;overflow:hidden}.phase-progress i{display:block;height:100%;background:#315f8d}@media(max-width:900px){.phase-strip{display:flex;overflow:auto;padding-bottom:4px}.phase-card{min-width:210px;flex:0 0 210px}}.owner-checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;border:1px solid var(--line);border-radius:8px;padding:9px;min-height:44px;background:#fff}.owner-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#faf9f6;font-size:12px}.owner-chip input{width:auto;margin:0}.team-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#f1eee6;font-size:10px;color:#665}
+.timeline-check{display:flex;align-items:center;gap:7px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px;font-weight:600;white-space:nowrap}.timeline-check input{width:auto;margin:0}@media(max-width:700px){.timeline-check{white-space:normal}}
 </style>
 </head>
 <body>
@@ -92,7 +93,13 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
  <div class="modal" id="moduleModal"><div class="modalbox"><div class="modalhead"><div><div class="eyebrow">PROJECT CONTROL</div><h2 id="moduleModalTitle"></h2></div><button class="close" onclick="moduleModal.classList.remove('show')">×</button></div><div class="formgrid" id="moduleForm"></div><div class="actions"><button class="btn gold" onclick="saveModuleItem()">Save</button></div></div></div>
 <section class="timeline-section" id="timelineSection">
  <div class="card"><div class="section-title">Project Timeline · Weekly Gantt</div><div class="sub" style="margin-bottom:12px">Actions with a Start Date and Due Date are shown across project weeks. The vertical line marks today.</div>
- <div class="timeline-toolbar"><select id="tlStream"><option value="">All streams</option></select><select id="tlOwner"><option value="">All owners</option></select><button class="btn" onclick="renderTimeline()">Refresh timeline</button></div>
+ <div class="timeline-toolbar">
+<select id="tlLevel" aria-label="Timeline level"><option value="block">Project Block</option><option value="stream">Stream</option><option value="topic">Topic</option></select>
+<select id="tlStream" aria-label="Stream"><option value="">All streams</option></select>
+<select id="tlOwner" aria-label="Owner"><option value="">All owners</option></select>
+<label class="timeline-check"><input type="checkbox" id="tlProgress" checked> Show progress until today</label>
+<label class="timeline-check"><input type="checkbox" id="tlHistory" checked> Show full historical process</label>
+</div>
  <div class="gantt"><div class="gantt-grid" id="ganttGrid"></div></div></div>
  </section>
  <div class="toolbar" id="trackerToolbar">
@@ -277,18 +284,34 @@ function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCD
 function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
 function showTracker(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();trackerToolbar.scrollIntoView({behavior:'smooth'})}
 function renderTimeline(){
- const streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),grid=document.getElementById('ganttGrid');
- const stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'';
- const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner)));
- const fallbackStart=utcDate('2026-03-31'),fallbackEnd=utcDate('2027-03-31');
- let min=rows.length?new Date(Math.min(...rows.map(r=>utcDate(normalizeDate(r.start))))):fallbackStart,max=rows.length?new Date(Math.max(...rows.map(r=>utcDate(normalizeDate(r.due))))):fallbackEnd;
- min=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=(max-min)/86400000,weeks=Math.ceil(days/7),ww=100/weeks;
+ const levelEl=document.getElementById('tlLevel'),streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),progressEl=document.getElementById('tlProgress'),historyEl=document.getElementById('tlHistory'),grid=document.getElementById('ganttGrid');
+ const level=levelEl?levelEl.value:'block',stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'',showProgress=progressEl?progressEl.checked:true,showHistory=historyEl?historyEl.checked:true;
+ const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));
+ const projectStart=utcDate('2026-03-31'),projectEnd=utcDate('2027-03-31');
+ const filtered=data.filter(r=>(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner)));
+ let rows=[];
+ if(level==='block'){
+   rows=projectPhases.map(p=>({id:p.id,label:p.name,sub:'Project Block',start:p.start,end:p.end,status:'',health:'',kind:'block'}));
+ }else if(level==='stream'){
+   const groups={};
+   filtered.forEach(r=>{const s=normalizeDate(r.start),e=normalizeDate(r.due);if(!s||!e)return;const key=r.stream||'Unassigned';if(!groups[key])groups[key]={id:key,label:key,sub:'Stream',start:s,end:e,status:'',health:'',kind:'stream',count:0};groups[key].count++;if(utcDate(s)<utcDate(groups[key].start))groups[key].start=s;if(utcDate(e)>utcDate(groups[key].end))groups[key].end=e});
+   rows=Object.values(groups).map(x=>({...x,sub:x.count+' scheduled topic'+(x.count===1?'':'s')}));
+ }else{
+   rows=filtered.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)).map(r=>({id:r.id,label:r.topic,sub:(r.stream||'Unassigned')+' · '+(r.owner||'Unassigned'),start:normalizeDate(r.start),end:normalizeDate(r.due),status:r.status,health:r.health,kind:'topic'}));
+ }
+ let min=projectStart,max=projectEnd;
+ if(!showHistory)min=today>projectStart?today:projectStart;
+ if(max<min)max=new Date(min);
+ const alignedMin=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=Math.max(7,(max-alignedMin)/86400000),weeks=Math.max(1,Math.ceil(days/7)),ww=100/weeks;
  grid.style.setProperty('--week-width',ww+'%');
- let head='<div class="gantt-head"><div class="gantt-label"><b>Action</b><small>'+rows.length+' scheduled actions</small></div><div class="gantt-track">';
- for(let i=0;i<weeks;i++){let d=new Date(min);d.setUTCDate(d.getUTCDate()+i*7);head+=`<span class="week" style="left:${i*ww}%;width:${ww}%"><strong>W${isoWeek(d)}</strong>${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'})}</span>`}
- const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));const tp=((today-min)/86400000/days)*100;if(tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;head+='</div></div>';
- grid.innerHTML=head+(rows.map(r=>{const s=utcDate(normalizeDate(r.start)),e=utcDate(normalizeDate(r.due));let l=Math.max(0,(s-min)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.id)} · ${esc(r.topic)}</b><small>${esc(r.stream)} · ${esc(r.owner||'Unassigned')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.topic)}: ${normalizeDate(r.start)} → ${normalizeDate(r.due)}">${esc(r.topic)}</span>${tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No actions have both Start Date and Due Date yet. Add dates to an action to place it on the timeline.</div>');
+ const levelName=level==='block'?'Project Blocks':level==='stream'?'Streams':'Topics';
+ let head='<div class="gantt-head"><div class="gantt-label"><b>'+levelName+'</b><small>'+rows.length+' visible</small></div><div class="gantt-track">';
+ for(let i=0;i<weeks;i++){let d=new Date(alignedMin);d.setUTCDate(d.getUTCDate()+i*7);head+=`<span class="week" style="left:${i*ww}%;width:${ww}%"><strong>W${isoWeek(d)}</strong>${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'})}</span>`}
+ const tp=((today-alignedMin)/86400000/days)*100;if(showProgress&&tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;head+='</div></div>';
+ const visibleRows=rows.filter(r=>utcDate(r.end)>=min&&utcDate(r.start)<=max);
+ grid.innerHTML=head+(visibleRows.map(r=>{const s=utcDate(r.start),e=utcDate(r.end);let l=Math.max(0,(s-alignedMin)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.label)}</b><small>${esc(r.sub||'')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.label)}: ${r.start} → ${r.end}">${esc(r.label)}</span>${showProgress&&tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No timeline items match the selected filters.</div>');
 }
+
 function fillTimelineFilters(){const s=document.getElementById('tlStream'),o=document.getElementById('tlOwner');if(!s||!o)return;s.length=1;o.length=1;[...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>s.add(new Option(v,v)));[...new Set(team.map(x=>x.name).filter(Boolean))].sort().forEach(v=>o.add(new Option(v,v)))}
 function exportCsv(){
  const cols=['id','stream','topic','description','action','raisedBy','owner','priority','start','due','status','health'];
@@ -298,5 +321,7 @@ function exportCsv(){
 function filterStatus(s){statusFilter.value=s;refresh();document.querySelector('.table-wrap').scrollIntoView()}
 ['search','phaseFilter','streamFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
+
+['tlLevel','tlStream','tlOwner','tlProgress','tlHistory'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
 </script>
 </body></html>
