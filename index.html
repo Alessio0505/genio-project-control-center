@@ -264,6 +264,12 @@ const moduleDefs={
  golive:{title:'Go-Live Control',sub:'Readiness and cutover checklist for February 2027.',prefix:'GL',fields:[['item','Readiness item','text'],['stream','Stream','text'],['owner','Owner','text'],['due','Due date','date'],['critical','Critical','select:Yes|No'],['status','Status','select:Not Started|In Progress|Ready|Blocked'],['comment','Comment','textarea']]}
 };
 let moduleData=JSON.parse(localStorage.getItem('genioPCCModules')||'{}');Object.keys(moduleDefs).forEach(k=>moduleData[k]=moduleData[k]||[]);
+const agreedMilestones=[
+ {id:'MS-001',name:'Physical Worksession Benelux / DACH',stream:'Project',date:'2026-09-28',owner:'',status:'Planned'},
+ {id:'MS-002',name:'Business Readiness',stream:'Project',date:'2026-12-31',owner:'',status:'Planned'},
+ {id:'MS-003',name:'JDE Benelux Go-Live',stream:'Project',date:'2027-02-03',owner:'',status:'Planned'}
+];
+let milestonesChanged=false;agreedMilestones.forEach(m=>{if(!moduleData.milestones.some(x=>x.name===m.name)){moduleData.milestones.push({...m});milestonesChanged=true}});if(milestonesChanged)localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));
 let activeModule='',editModuleIndex=null;
 function hideWork(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='none';trackerTable.style.display='none'}
 function showModule(k){hideWork();activeModule=k;moduleSection.classList.add('show');renderModule();moduleSection.scrollIntoView({behavior:'smooth'})}
@@ -275,8 +281,8 @@ function renderModule(){const d=moduleDefs[activeModule],a=moduleData[activeModu
 }
 function openModuleItem(i=null){editModuleIndex=i;const d=moduleDefs[activeModule],x=i===null?{}:moduleData[activeModule][i];moduleModalTitle.textContent=(i===null?'New ':'Edit ')+d.title.replace(/s$/,'');
  moduleForm.innerHTML=d.fields.map(f=>{const [key,label,type]=f,v=x[key]||'';if(type==='textarea')return `<label class="full">${label}<textarea data-mf="${key}">${esc(v)}</textarea></label>`;if(type.startsWith('select:'))return `<label>${label}<select data-mf="${key}">${type.slice(7).split('|').map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select></label>`;return `<label>${label}<input data-mf="${key}" type="${type}" value="${esc(v)}"></label>`}).join('');moduleModal.classList.add('show')}
-function saveModuleItem(){const d=moduleDefs[activeModule],obj={};moduleForm.querySelectorAll('[data-mf]').forEach(el=>obj[el.dataset.mf]=el.value);if(editModuleIndex===null){obj.id=d.prefix+'-'+String(moduleData[activeModule].length+1).padStart(3,'0');moduleData[activeModule].push(obj)}else{obj.id=moduleData[activeModule][editModuleIndex].id;moduleData[activeModule][editModuleIndex]=obj}localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));moduleModal.classList.remove('show');renderModule()}
-function deleteModuleItem(i){if(confirm('Delete this record?')){moduleData[activeModule].splice(i,1);localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));renderModule()}}
+function saveModuleItem(){const d=moduleDefs[activeModule],obj={};moduleForm.querySelectorAll('[data-mf]').forEach(el=>obj[el.dataset.mf]=el.value);if(editModuleIndex===null){obj.id=d.prefix+'-'+String(moduleData[activeModule].length+1).padStart(3,'0');moduleData[activeModule].push(obj)}else{obj.id=moduleData[activeModule][editModuleIndex].id;moduleData[activeModule][editModuleIndex]=obj}localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));moduleModal.classList.remove('show');renderModule();if(activeModule==='milestones'&&document.getElementById('timelineSection')?.classList.contains('show'))renderTimeline()}
+function deleteModuleItem(i){if(confirm('Delete this record?')){moduleData[activeModule].splice(i,1);localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));renderModule();if(activeModule==='milestones'&&document.getElementById('timelineSection')?.classList.contains('show'))renderTimeline()}}
 function normalizeDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(v||'')?v:''}
 function utcDate(s){const a=s.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]))}
 function monday(d){const x=new Date(d),day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day);return x}
@@ -289,7 +295,7 @@ function renderTimeline(){
  const level=levelEl?levelEl.value:'block',stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'',showProgress=progressEl?progressEl.checked:true,showHistory=historyEl?historyEl.checked:true,showMilestones=milestoneEl?milestoneEl.checked:true;
  const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));
  const projectStart=utcDate('2026-03-31'),projectEnd=utcDate('2027-03-31');
- const milestones=[{name:'Physical Worksession Benelux / DACH',date:'2026-09-28'},{name:'Business Readiness',date:'2026-12-31'},{name:'JDE Benelux Go-Live',date:'2027-02-03'}];
+ const milestones=(moduleData.milestones||[]).filter(m=>normalizeDate(m.date)).map(m=>({name:m.name,date:m.date,status:m.status||''}));
  const filtered=data.filter(r=>(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner)));
  let rows=[];
  if(level==='block'){
