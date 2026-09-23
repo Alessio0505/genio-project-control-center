@@ -162,7 +162,7 @@ function saveItem(){
  const primaryOwnerId=fPrimaryOwner.value;let ownerIds=[primaryOwnerId,...[...fCoOwners.selectedOptions].map(o=>o.value)].filter(Boolean);ownerIds=[...new Set(ownerIds)];
  const owner=ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean).join(' + ');
  Object.assign(r,{stream:fStream.value,topic:fTopic.value,owner,ownerIds,primaryOwnerId,raisedBy:fRaised.value,priority:fPriority.value,status:fStatus.value,start:fStart.value,due:fDue.value,health:fHealth.value,description:fDesc.value,action:fAction.value});
- if(!currentId)data.push(r); localStorage.setItem('genioPCCData',JSON.stringify(data));closeModal();refresh();
+ if(!currentId)data.push(r); localStorage.setItem('genioPCCData',JSON.stringify(data));closeModal();refresh();if(document.getElementById('timelineSection').classList.contains('show'))renderTimeline();
 }
 function openTeamAdmin(){renderTeam();teamModal.classList.add('show')}
 function closeTeamAdmin(){teamModal.classList.remove('show')}
@@ -219,17 +219,19 @@ function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCD
 function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
 function showTracker(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerToolbar.scrollIntoView({behavior:'smooth'})}
 function renderTimeline(){
- const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!tlStream.value||r.stream===tlStream.value)&&(!tlOwner.value||ownerNames(r).includes(tlOwner.value)));
+ const streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),grid=document.getElementById('ganttGrid');
+ const stream=streamEl?streamEl.value:'',owner=ownerEl?ownerEl.value:'';
+ const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!stream||r.stream===stream)&&(!owner||ownerNames(r).includes(owner));
  const fallbackStart=utcDate('2026-04-01'),fallbackEnd=utcDate('2027-02-28');
  let min=rows.length?new Date(Math.min(...rows.map(r=>utcDate(normalizeDate(r.start))))):fallbackStart,max=rows.length?new Date(Math.max(...rows.map(r=>utcDate(normalizeDate(r.due))))):fallbackEnd;
  min=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=(max-min)/86400000,weeks=Math.ceil(days/7),ww=100/weeks;
- ganttGrid.style.setProperty('--week-width',ww+'%');
+ grid.style.setProperty('--week-width',ww+'%');
  let head='<div class="gantt-head"><div class="gantt-label"><b>Action</b><small>'+rows.length+' scheduled actions</small></div><div class="gantt-track">';
  for(let i=0;i<weeks;i++){let d=new Date(min);d.setUTCDate(d.getUTCDate()+i*7);head+=`<span class="week" style="left:${i*ww}%;width:${ww}%"><strong>W${isoWeek(d)}</strong>${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'})}</span>`}
  const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));const tp=((today-min)/86400000/days)*100;if(tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;head+='</div></div>';
- ganttGrid.innerHTML=head+(rows.map(r=>{const s=utcDate(normalizeDate(r.start)),e=utcDate(normalizeDate(r.due));let l=Math.max(0,(s-min)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.id)} · ${esc(r.topic)}</b><small>${esc(r.stream)} · ${esc(r.owner||'Unassigned')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.topic)}: ${normalizeDate(r.start)} → ${normalizeDate(r.due)}">${esc(r.topic)}</span>${tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No actions have both Start Date and Due Date yet. Add dates to an action to place it on the timeline.</div>');
+ grid.innerHTML=head+(rows.map(r=>{const s=utcDate(normalizeDate(r.start)),e=utcDate(normalizeDate(r.due));let l=Math.max(0,(s-min)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.id)} · ${esc(r.topic)}</b><small>${esc(r.stream)} · ${esc(r.owner||'Unassigned')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.topic)}: ${normalizeDate(r.start)} → ${normalizeDate(r.due)}">${esc(r.topic)}</span>${tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No actions have both Start Date and Due Date yet. Add dates to an action to place it on the timeline.</div>');
 }
-function fillTimelineFilters(){[...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>tlStream.add(new Option(v,v)));[...new Set(team.map(x=>x.name).filter(Boolean))].sort().forEach(v=>tlOwner.add(new Option(v,v)))}
+function fillTimelineFilters(){const s=document.getElementById('tlStream'),o=document.getElementById('tlOwner');if(!s||!o)return;s.length=1;o.length=1;[...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>s.add(new Option(v,v)));[...new Set(team.map(x=>x.name).filter(Boolean))].sort().forEach(v=>o.add(new Option(v,v)))}
 function exportCsv(){
  const cols=['id','stream','topic','description','action','raisedBy','owner','priority','start','due','status','health'];
  const csv=[cols.join(','),...data.map(r=>cols.map(c=>'"'+String(r[c]??'').replaceAll('"','""')+'"').join(','))].join('\n');
