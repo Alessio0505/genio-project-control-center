@@ -34,6 +34,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 .modalbox{background:#fff;width:min(760px,96vw);max-height:90vh;overflow:auto;border-radius:16px;padding:24px} .modalhead{display:flex;justify-content:space-between;gap:10px}
 .close{border:0;background:#eee;border-radius:50%;width:32px;height:32px;cursor:pointer} .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px} label{font-size:11px;color:#666} label input,label select,label textarea{width:100%;margin-top:5px} textarea{min-height:80px;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit}
 .full{grid-column:1/-1} .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.timeline-section{display:none;margin:18px 0}.timeline-section.show{display:block}.timeline-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.gantt{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}.gantt-grid{min-width:1300px}.gantt-head,.gantt-row{display:grid;grid-template-columns:290px 1fr}.gantt-label{padding:9px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;min-width:0}.gantt-label b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gantt-label small{color:var(--muted)}.gantt-track{position:relative;height:50px;border-bottom:1px solid var(--line);background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:var(--week-width) 100%}.gantt-head .gantt-track{height:52px;background:#faf9f6}.week{position:absolute;top:0;height:100%;border-left:1px solid #e7e4dc;padding:6px 4px;font-size:9px;color:#777}.week strong{display:block;color:#333;font-size:10px}.gbar{position:absolute;top:13px;height:24px;border-radius:6px;background:#c99a45;min-width:5px;padding:5px 7px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden}.gbar.finished{background:#dbece2;color:#286443}.gbar.delayed{background:#f5dddd;color:#8e3028}.gbar.risk{background:#f5ead3;color:#825f21}.today-line{position:absolute;top:0;bottom:0;width:2px;background:#111;z-index:3}.today-line:before{content:'TODAY';position:absolute;top:1px;left:4px;font-size:8px;font-weight:800}.month-band{position:absolute;bottom:4px;font-size:9px;font-weight:700;color:#555}
 @media(max-width:900px){.app{grid-template-columns:1fr}aside{display:none}main{padding:20px}.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
 </style>
 </head>
@@ -43,7 +44,8 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
  <div class="brand"><div style="width:44px;height:44px;border:1px solid #c99a45;border-radius:11px;display:grid;place-items:center;color:#e5bd72;font-size:28px;font-weight:800">G</div><div><b>GENIO</b><small>PROJECT CONTROL CENTER</small></div></div>
  <nav>
   <button class="active"><span class="dot">●</span>Dashboard</button>
-  <button onclick="document.querySelector('.table-wrap').scrollIntoView()"><span class="dot">▣</span>Project Tracker</button>
+  <button onclick="showTracker()"><span class="dot">▣</span>Project Tracker</button>
+  <button onclick="showTimeline()"><span class="dot">━</span>Timeline</button>
   <button onclick="filterStatus('Outstanding')"><span class="dot">✓</span>Open Actions</button>
   <button><span class="dot">◆</span>Milestones</button>
   <button><span class="dot">⚠</span>RAID</button>
@@ -61,7 +63,12 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <div class="card"><div class="section-title">Progress by stream</div><div class="streams" id="streams"></div></div>
   <div class="card"><div class="section-title">Needs attention</div><div class="attn" id="attention"></div></div>
  </div>
- <div class="toolbar">
+ <section class="timeline-section" id="timelineSection">
+ <div class="card"><div class="section-title">Project Timeline · Weekly Gantt</div><div class="sub" style="margin-bottom:12px">Actions with a Start Date and Due Date are shown across project weeks. The vertical line marks today.</div>
+ <div class="timeline-toolbar"><select id="tlStream"><option value="">All streams</option></select><select id="tlOwner"><option value="">All owners</option></select><button class="btn" onclick="renderTimeline()">Refresh timeline</button></div>
+ <div class="gantt"><div class="gantt-grid" id="ganttGrid"></div></div></div>
+ </section>
+ <div class="toolbar" id="trackerToolbar">
   <input class="search" id="search" placeholder="Search topic, owner, description…">
   <select id="streamFilter"><option value="">All streams</option></select>
   <select id="statusFilter"><option value="">All statuses</option></select>
@@ -69,7 +76,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <button class="btn gold" onclick="newItem()">+ New action</button>
   <button class="btn dark" onclick="exportCsv()">Export CSV</button>
  </div>
- <div class="table-wrap"><table><thead><tr><th>ID</th><th>Stream</th><th>Topic</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
+ <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th>Stream</th><th>Topic</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
 </main>
 </div>
 <div class="modal" id="teamModal"><div class="modalbox">
@@ -91,6 +98,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <label>Primary owner<select id="fPrimaryOwner"></select></label><label>Raised by<input id="fRaised"></label>
   <label class="full">Co-owners<select id="fCoOwners" multiple size="5"></select><span class="sub">Ctrl/Cmd + click to select multiple owners.</span></label>
   <label>Priority<select id="fPriority"><option>High</option><option>Medium</option><option>Low</option></select></label>
+  <label>Start date<input id="fStart" type="date"></label><label>Due date<input id="fDue" type="date"></label>
   <label>Status<select id="fStatus"><option>Outstanding</option><option>Ongoing</option><option>Finished</option><option>Blocked</option></select></label>
   <label>Due date<input id="fDue"></label><label>Health<select id="fHealth"><option>On Track</option><option>At Risk</option><option>Delayed</option></select></label>
   <label class="full">Description<textarea id="fDesc"></textarea></label>
@@ -140,14 +148,14 @@ function syncOwnerSelectors(r={}){
  [...fCoOwners.options].forEach(o=>o.selected=selected.has(o.value)&&o.value!==primary);
 }
 function openItem(id){currentId=id;const r=data.find(x=>x.id===id); modalTitle.textContent=r.id+' · '+r.topic;
- fStream.value=r.stream;fTopic.value=r.topic;syncOwnerSelectors(r);fRaised.value=r.raisedBy;fPriority.value=r.priority;fStatus.value=r.status;fDue.value=r.due;fHealth.value=r.health;fDesc.value=r.description;fAction.value=r.action;modal.classList.add('show')}
-function newItem(){currentId=null;modalTitle.textContent='New action';['fStream','fTopic','fRaised','fDue','fDesc','fAction'].forEach(id=>document.getElementById(id).value='');syncOwnerSelectors();fPriority.value='Medium';fStatus.value='Outstanding';fHealth.value='On Track';modal.classList.add('show')}
+ fStream.value=r.stream;fTopic.value=r.topic;syncOwnerSelectors(r);fRaised.value=r.raisedBy;fPriority.value=r.priority;fStatus.value=r.status;fStart.value=normalizeDate(r.start);fDue.value=normalizeDate(r.due);fHealth.value=r.health;fDesc.value=r.description;fAction.value=r.action;modal.classList.add('show')}
+function newItem(){currentId=null;modalTitle.textContent='New action';['fStream','fTopic','fRaised','fStart','fDue','fDesc','fAction'].forEach(id=>document.getElementById(id).value='');syncOwnerSelectors();fPriority.value='Medium';fStatus.value='Outstanding';fHealth.value='On Track';modal.classList.add('show')}
 function closeModal(){modal.classList.remove('show')}
 function saveItem(){
  let r=currentId?data.find(x=>x.id===currentId):{id:'GPC-'+String(data.length+1).padStart(3,'0')};
  const primaryOwnerId=fPrimaryOwner.value;let ownerIds=[primaryOwnerId,...[...fCoOwners.selectedOptions].map(o=>o.value)].filter(Boolean);ownerIds=[...new Set(ownerIds)];
  const owner=ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean).join(' + ');
- Object.assign(r,{stream:fStream.value,topic:fTopic.value,owner,ownerIds,primaryOwnerId,raisedBy:fRaised.value,priority:fPriority.value,status:fStatus.value,due:fDue.value,health:fHealth.value,description:fDesc.value,action:fAction.value});
+ Object.assign(r,{stream:fStream.value,topic:fTopic.value,owner,ownerIds,primaryOwnerId,raisedBy:fRaised.value,priority:fPriority.value,status:fStatus.value,start:fStart.value,due:fDue.value,health:fHealth.value,description:fDesc.value,action:fAction.value});
  if(!currentId)data.push(r); localStorage.setItem('genioPCCData',JSON.stringify(data));closeModal();refresh();
 }
 function openTeamAdmin(){renderTeam();teamModal.classList.add('show')}
@@ -176,6 +184,24 @@ function sendReminder(){
  if(!emails.length){alert('No email address is linked to this action owner yet. Add the owner in Team & Admin first.');return}
  location.href=`mailto:${emails.map(encodeURIComponent).join(',')}?subject=${subject}&body=${body}`;
 }
+function normalizeDate(v){if(!v)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;const m=String(v).match(/^(\d{1,2})-([A-Za-z]{3})$/);if(!m)return '';const mon={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sept:'09',Sep:'09',Oct:'10',Nov:'11',Dec:'12'}[m[2]];if(!mon)return '';return '2026-'+mon+'-'+String(m[1]).padStart(2,'0')}
+function utcDate(s){const a=s.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]))}
+function monday(d){const x=new Date(d),day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day);return x}
+function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
+function showTimeline(){timelineSection.classList.add('show');trackerToolbar.style.display='none';trackerTable.style.display='none';renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
+function showTracker(){timelineSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerToolbar.scrollIntoView({behavior:'smooth'})}
+function renderTimeline(){
+ const rows=data.filter(r=>normalizeDate(r.start)&&normalizeDate(r.due)&&(!tlStream.value||r.stream===tlStream.value)&&(!tlOwner.value||ownerNames(r).includes(tlOwner.value)));
+ const fallbackStart=utcDate('2026-04-01'),fallbackEnd=utcDate('2027-02-28');
+ let min=rows.length?new Date(Math.min(...rows.map(r=>utcDate(normalizeDate(r.start))))):fallbackStart,max=rows.length?new Date(Math.max(...rows.map(r=>utcDate(normalizeDate(r.due))))):fallbackEnd;
+ min=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=(max-min)/86400000,weeks=Math.ceil(days/7),ww=100/weeks;
+ ganttGrid.style.setProperty('--week-width',ww+'%');
+ let head='<div class="gantt-head"><div class="gantt-label"><b>Action</b><small>'+rows.length+' scheduled actions</small></div><div class="gantt-track">';
+ for(let i=0;i<weeks;i++){let d=new Date(min);d.setUTCDate(d.getUTCDate()+i*7);head+=`<span class="week" style="left:${i*ww}%;width:${ww}%"><strong>W${isoWeek(d)}</strong>${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'})}</span>`}
+ const today=new Date(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()));const tp=((today-min)/86400000/days)*100;if(tp>=0&&tp<=100)head+=`<i class="today-line" style="left:${tp}%"></i>`;head+='</div></div>';
+ ganttGrid.innerHTML=head+(rows.map(r=>{const s=utcDate(normalizeDate(r.start)),e=utcDate(normalizeDate(r.due));let l=Math.max(0,(s-min)/86400000/days*100),w=Math.max(.5,((e-s)/86400000+1)/days*100);let cls=/finished/i.test(r.status)?'finished':r.health==='Delayed'?'delayed':r.health==='At Risk'?'risk':'';return `<div class="gantt-row"><div class="gantt-label"><b>${esc(r.id)} · ${esc(r.topic)}</b><small>${esc(r.stream)} · ${esc(r.owner||'Unassigned')}</small></div><div class="gantt-track"><span class="gbar ${cls}" style="left:${l}%;width:${w}%" title="${esc(r.topic)}: ${normalizeDate(r.start)} → ${normalizeDate(r.due)}">${esc(r.topic)}</span>${tp>=0&&tp<=100?`<i class="today-line" style="left:${tp}%"></i>`:''}</div></div>`}).join('')||'<div class="gantt-label">No actions have both Start Date and Due Date yet. Add dates to an action to place it on the timeline.</div>');
+}
+function fillTimelineFilters(){[...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>tlStream.add(new Option(v,v)));[...new Set(team.map(x=>x.name).filter(Boolean))].sort().forEach(v=>tlOwner.add(new Option(v,v)))}
 function exportCsv(){
  const cols=['id','stream','topic','description','action','raisedBy','owner','priority','start','due','status','health'];
  const csv=[cols.join(','),...data.map(r=>cols.map(c=>'"'+String(r[c]??'').replaceAll('"','""')+'"').join(','))].join('\n');
@@ -183,6 +209,6 @@ function exportCsv(){
 }
 function filterStatus(s){statusFilter.value=s;refresh();document.querySelector('.table-wrap').scrollIntoView()}
 ['search','streamFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
-fillFilters();refresh();
+fillFilters();fillTimelineFilters();refresh();
 </script>
 </body></html>
