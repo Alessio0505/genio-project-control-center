@@ -21,7 +21,11 @@ main{padding:30px 34px;max-width:1600px} .top{display:flex;justify-content:space
 .kpi span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em} .kpi strong{font-size:27px;margin-top:6px;display:block}
 .toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
 .check-dropdown{position:relative}.check-dropdown>button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px;min-width:150px;text-align:left;cursor:pointer}
-.check-menu{display:none;position:absolute;z-index:40;top:calc(100% + 5px);left:0;min-width:230px;max-height:280px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0002;padding:7px}
+.check-menu{display:none;position:absolute;z-index:40;top:calc(100% + 5px);left:0;width:300px;max-height:360px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0002;padding:8px}
+.owner-menu-head{position:sticky;top:-8px;background:#fff;padding:7px 6px 9px;border-bottom:1px solid var(--line);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.owner-menu-head b{font-size:11px;text-transform:uppercase;letter-spacing:.08em}.owner-menu-head button{border:0;background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer}
+.owner-group-title{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:10px 8px 4px;border-top:1px solid #f0eee8;margin-top:4px}
+.owner-group-title:first-of-type{border-top:0;margin-top:0}.check-menu label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .check-dropdown.open .check-menu{display:block}.check-menu label{display:flex;gap:8px;align-items:center;padding:7px 8px;border-radius:7px;font-size:12px;cursor:pointer}.check-menu label:hover{background:#f6f5f1}.check-menu input{margin:0} input,select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px}
 input.search{min-width:280px} .btn{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:600} .btn.gold{background:var(--gold);color:#111} .btn.dark{background:#171714;color:#fff}
 .table-wrap{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:auto}
@@ -263,11 +267,19 @@ function fillFilters(){ phaseFilter.innerHTML='<option value="">All project bloc
  [...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>streamFilter.add(new Option(v,v)));
  [...new Set(data.map(x=>x.status).filter(Boolean))].sort().forEach(v=>statusFilter.add(new Option(v,v)));
  const ownerVals=[...new Set(data.flatMap(r=>String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)))].sort();
- ownerFilterMenu.innerHTML=ownerVals.map(v=>`<label><input type="checkbox" value="${esc(v)}" onchange="ownerFilterChanged()"> <span>${esc(v)}</span></label>`).join('');updateOwnerFilterLabel();
+ const groupSet=new Set(team.filter(u=>u.type==='Group').map(u=>canonicalOwnerName(u.name)));
+ const people=ownerVals.filter(v=>!groupSet.has(v)).sort((a,b)=>a.localeCompare(b));
+ const groups=ownerVals.filter(v=>groupSet.has(v)).sort((a,b)=>a.localeCompare(b));
+ const checks=arr=>arr.map(v=>`<label><input type="checkbox" value="${esc(v)}" onchange="ownerFilterChanged()"> <span>${esc(v)}</span></label>`).join('');
+ ownerFilterMenu.innerHTML='<div class="owner-menu-head"><b>Select owners</b><button type="button" onclick="clearOwnerFilter(event)">Clear all</button></div>'+
+   (people.length?'<div class="owner-group-title">Persons</div>'+checks(people):'')+
+   (groups.length?'<div class="owner-group-title">Groups</div>'+checks(groups):'');
+ updateOwnerFilterLabel();
 }
 function getSelectedOwners(){return [...document.querySelectorAll('#ownerFilterMenu input:checked')].map(x=>x.value)}
 function updateOwnerFilterLabel(){const a=getSelectedOwners(),b=document.getElementById('ownerFilterBtn');if(!b)return;b.textContent=!a.length?'All owners ▾':a.length===1?a[0]+' ▾':a.length+' owners selected ▾'}
 function ownerFilterChanged(){updateOwnerFilterLabel();refresh()}
+function clearOwnerFilter(e){if(e)e.stopPropagation();document.querySelectorAll('#ownerFilterMenu input:checked').forEach(x=>x.checked=false);updateOwnerFilterLabel();refresh()}
 function toggleOwnerDropdown(e){e.stopPropagation();document.getElementById('ownerDropdown')?.classList.toggle('open')}
 document.addEventListener('click',e=>{const d=document.getElementById('ownerDropdown');if(d&&!d.contains(e.target))d.classList.remove('open')});
 function ownerNames(r){return r.ownerIds?.length?r.ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean).map(canonicalOwnerName):String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)}
