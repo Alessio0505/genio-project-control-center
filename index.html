@@ -63,6 +63,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 .compact-marker span{display:block;position:absolute;top:14px;left:5px;max-width:105px;padding:2px 4px;border-radius:4px;background:rgba(255,245,245,.94);border:1px solid #efcaca;color:#a92727;font-size:8px;font-weight:700;line-height:1.15;white-space:normal;z-index:8;box-shadow:0 1px 2px rgba(0,0,0,.04)}.gantt-head .compact-marker span{display:none}.gantt-row:nth-child(even) .compact-marker span{top:26px}
 .milestone-track{min-height:58px;overflow:visible}.lane-marker{top:5px;bottom:5px;border-left:2px solid #d32f2f}.lane-marker:before{top:-3px}.lane-marker span{display:block;position:absolute;top:20px;left:6px;max-width:120px;padding:2px 5px;border-radius:4px;background:#fff5f5;border:1px solid #efcaca;color:#a92727;font-size:8px;font-weight:700;line-height:1.15;white-space:normal;z-index:8}.milestone-lane{min-height:58px;background:#fffafa}
 .milestone-line-only{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #d32f2f;z-index:4;pointer-events:none}
+.phase-strip{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin:14px 0}.phase-progress-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:96px;box-shadow:0 1px 2px rgba(0,0,0,.025)}.phase-progress-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.phase-progress-top span{font-size:11px;font-weight:750;line-height:1.25;color:#313131}.phase-progress-top strong{font-size:20px;line-height:1;color:#171717;white-space:nowrap}.phase-progress-bar{height:6px;background:#ece9e2;border-radius:99px;overflow:hidden;margin:13px 0 8px}.phase-progress-bar i{display:block;height:100%;background:#b7944f;border-radius:99px}.phase-progress-foot{font-size:10px;color:#777}.phase-progress-foot b{font-size:11px;color:#333}@media(max-width:700px){.phase-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -88,11 +89,11 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
  <div class="top"><div><div class="eyebrow">GENIO PROJECT CONTROL CENTER</div><h1>JDE Benelux Transformation</h1><div class="sub">Business project management · Go-live February 2027</div></div><div class="avatar">AC</div></div>
  <section id="dashboardPage">
  <div class="cards" id="kpis"></div>
+ <div class="phase-strip" id="phaseStrip"></div>
  <div class="card dashboard-stream-card"><div class="section-title">Progress by stream</div><div class="stream-kpis" id="streams"></div></div>
  <div class="card dashboard-attention-card"><div class="section-title">Needs attention</div><div class="attn" id="attention"></div></div>
  <div class="card dashboard-timeline-card"><div class="section-title">Project Timeline</div><div class="sub" style="margin-bottom:12px">Main project blocks and key milestones.</div><div class="gantt"><div class="gantt-grid" id="dashboardGantt"></div></div></div>
  </section>
- <div class="phase-strip" id="phaseStrip" style="display:none"></div>
  <section class="module-section" id="moduleSection">
  <div class="card"><div class="module-head"><div><div class="eyebrow" id="moduleEyebrow">PROJECT CONTROL</div><div class="section-title" id="moduleTitle" style="font-size:20px;margin:4px 0"></div><div class="sub" id="moduleSub"></div></div><button class="btn gold" id="moduleAdd">+ Add</button></div>
  <div class="module-grid" id="moduleKpis"></div>
@@ -186,8 +187,19 @@ function inferPhase(r){return r.phase||''}
 data.forEach(r=>{if(!r.phase)r.phase=inferPhase(r)});
 function phaseName(id){return projectPhases.find(p=>p.id===id)?.name||id||'Unassigned'}
 function renderPhases(){
- const el=document.getElementById('phaseStrip'); if(!el)return;
- el.innerHTML=projectPhases.map(p=>{const a=data.filter(r=>r.phase===p.id),done=a.filter(r=>/finished|completed/i.test(r.status)).length,pc=a.length?Math.round(done/a.length*100):0;return `<div class="phase-card" onclick="filterPhase('${p.id}')"><b>${esc(p.name)}</b><small>${a.length} actions · ${pc}% complete</small><div class="phase-progress"><i style="width:${pc}%"></i></div></div>`}).join('');
+ const phases=projectPhases.map(p=>{
+   const items=data.filter(r=>r.phase===p.id);
+   const completed=items.filter(r=>/finished|completed/i.test(r.status||'')).length;
+   const total=items.length;
+   const pct=total?Math.round(completed/total*100):0;
+   return {...p,completed,total,pct};
+ });
+ phaseStrip.innerHTML=phases.map(p=>`
+   <div class="phase-progress-card">
+     <div class="phase-progress-top"><span>${esc(p.name)}</span><strong>${p.pct}%</strong></div>
+     <div class="phase-progress-bar"><i style="width:${p.pct}%"></i></div>
+     <div class="phase-progress-foot"><b>${p.completed}/${p.total}</b> completed</div>
+   </div>`).join('');
 }
 function filterPhase(id){phaseFilter.value=id;refresh();document.getElementById('trackerToolbar').scrollIntoView({behavior:'smooth'})}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
