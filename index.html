@@ -19,7 +19,10 @@ main{padding:30px 34px;max-width:1600px} .top{display:flex;justify-content:space
 .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin:25px 0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px;box-shadow:0 2px 8px #00000008}
 .kpi span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em} .kpi strong{font-size:27px;margin-top:6px;display:block}
-.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px} input,select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.check-dropdown{position:relative}.check-dropdown>button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px;min-width:150px;text-align:left;cursor:pointer}
+.check-menu{display:none;position:absolute;z-index:40;top:calc(100% + 5px);left:0;min-width:230px;max-height:280px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0002;padding:7px}
+.check-dropdown.open .check-menu{display:block}.check-menu label{display:flex;gap:8px;align-items:center;padding:7px 8px;border-radius:7px;font-size:12px;cursor:pointer}.check-menu label:hover{background:#f6f5f1}.check-menu input{margin:0} input,select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px}
 input.search{min-width:280px} .btn{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:600} .btn.gold{background:var(--gold);color:#111} .btn.dark{background:#171714;color:#fff}
 .table-wrap{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:auto}
 table{border-collapse:collapse;width:100%;min-width:1050px} th{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#777;text-align:left;background:#faf9f6;padding:11px;border-bottom:1px solid var(--line)}
@@ -120,7 +123,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <input class="search" id="search" placeholder="Search topic, raised by, owner, description…">
   <select id="phaseFilter"><option value="">All project blocks</option></select><select id="streamFilter"><option value="">All streams</option></select>
   <select id="raisedFilter"><option value="">All raised by</option></select>
-  <select id="ownerFilter"><option value="">All owners</option></select>
+  <div class="check-dropdown" id="ownerDropdown"><button type="button" id="ownerFilterBtn" onclick="toggleOwnerDropdown(event)">All owners ▾</button><div class="check-menu" id="ownerFilterMenu"></div></div>
   <select id="statusFilter" multiple size="4" title="Select one or more statuses"><option value="">All statuses</option></select>
   <select id="prioFilter"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
   <button class="btn gold" onclick="newItem()">+ New action</button>
@@ -231,9 +234,9 @@ let dueSort='',blockSort='';
 function toggleBlockSort(){blockSort=blockSort==='asc'?'desc':'asc';dueSort='';const b=document.getElementById('blockSortIcon'),d=document.getElementById('dueSortIcon');if(b)b.textContent=blockSort==='asc'?'↑':'↓';if(d)d.textContent='↕';refresh()}
 function toggleDueSort(){dueSort=dueSort==='asc'?'desc':'asc';blockSort='';const i=document.getElementById('dueSortIcon'),b=document.getElementById('blockSortIcon');if(i)i.textContent=dueSort==='asc'?'↑':'↓';if(b)b.textContent='↕';refresh()}
 function refresh(){
- const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, of=ownerFilter.value, sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
+ const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, ofs=getSelectedOwners(), sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
  const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
- let view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!of||ownerNames(r).includes(of)||String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*;\s*|\s*,\s*/).includes(of))&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
+ let view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!ofs.length||ownerNames(r).some(n=>ofs.includes(n)))&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
  if(blockSort){view.sort((a,b)=>{const an=parseInt(String(a.phase||'').replace(/\D/g,''),10),bn=parseInt(String(b.phase||'').replace(/\D/g,''),10);const av=Number.isNaN(an)?999:an,bv=Number.isNaN(bn)?999:bn;return blockSort==='asc'?av-bv:bv-av})}
  if(dueSort){view.sort((a,b)=>{const ad=normalizeDate(a.due),bd=normalizeDate(b.due);if(!ad&&!bd)return 0;if(!ad)return 1;if(!bd)return -1;return dueSort==='asc'?ad.localeCompare(bd):bd.localeCompare(ad)})}
  tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.raisedBy)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
@@ -260,8 +263,13 @@ function fillFilters(){ phaseFilter.innerHTML='<option value="">All project bloc
  [...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>streamFilter.add(new Option(v,v)));
  [...new Set(data.map(x=>x.status).filter(Boolean))].sort().forEach(v=>statusFilter.add(new Option(v,v)));
  const ownerVals=[...new Set(data.flatMap(r=>String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)))].sort();
- ownerVals.forEach(v=>ownerFilter.add(new Option(v,v)));
+ ownerFilterMenu.innerHTML=ownerVals.map(v=>`<label><input type="checkbox" value="${esc(v)}" onchange="ownerFilterChanged()"> <span>${esc(v)}</span></label>`).join('');updateOwnerFilterLabel();
 }
+function getSelectedOwners(){return [...document.querySelectorAll('#ownerFilterMenu input:checked')].map(x=>x.value)}
+function updateOwnerFilterLabel(){const a=getSelectedOwners(),b=document.getElementById('ownerFilterBtn');if(!b)return;b.textContent=!a.length?'All owners ▾':a.length===1?a[0]+' ▾':a.length+' owners selected ▾'}
+function ownerFilterChanged(){updateOwnerFilterLabel();refresh()}
+function toggleOwnerDropdown(e){e.stopPropagation();document.getElementById('ownerDropdown')?.classList.toggle('open')}
+document.addEventListener('click',e=>{const d=document.getElementById('ownerDropdown');if(d&&!d.contains(e.target))d.classList.remove('open')});
 function ownerNames(r){return r.ownerIds?.length?r.ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean).map(canonicalOwnerName):String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)}
 function syncOwnerSelectors(r={}){
  const active=team.filter(u=>u.active!==false),old=ownerNames(r);
@@ -422,7 +430,7 @@ function exportCsv(){
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='genio-project-control-center.csv';a.click();
 }
 function filterStatus(s){showTracker();[...statusFilter.options].forEach(o=>o.selected=o.value===s);refresh();window.scrollTo({top:0,behavior:'smooth'})}
-['search','phaseFilter','streamFilter','raisedFilter','ownerFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
+['search','phaseFilter','streamFilter','raisedFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
 
 ['tlLevel','tlStream','tlOwner','tlProgress','tlHistory','tlMilestones'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
