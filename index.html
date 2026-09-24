@@ -120,7 +120,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <input class="search" id="search" placeholder="Search topic, raised by, owner, description…">
   <select id="phaseFilter"><option value="">All project blocks</option></select><select id="streamFilter"><option value="">All streams</option></select>
   <select id="raisedFilter"><option value="">All raised by</option></select>
-  <select id="statusFilter"><option value="">All statuses</option></select>
+  <select id="statusFilter" multiple size="4" title="Select one or more statuses"><option value="">All statuses</option></select>
   <select id="prioFilter"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
   <button class="btn gold" onclick="newItem()">+ New action</button>
   <button class="btn dark" onclick="exportCsv()">Export CSV</button>
@@ -212,9 +212,9 @@ function filterPhase(id){phaseFilter.value=id;refresh();document.getElementById(
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function slug(s){return String(s).toLowerCase().replace(/\s+/g,'-')}
 function refresh(){
- const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, st=statusFilter.value, pf=prioFilter.value;
+ const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
  const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
- const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!st||r.status===st)&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
+ const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
  tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.raisedBy)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
  renderKpis(); renderStreams(); renderAttention(); renderPhases(); renderDashboardTimeline();
 }
@@ -321,8 +321,8 @@ function utcDate(s){const a=s.split('-').map(Number);return new Date(Date.UTC(a[
 function monday(d){const x=new Date(d),day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day);return x}
 function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
 function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();window.scrollTo({top:0,behavior:'smooth'})}
-function showTracker(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Project Tracker';trackerPageSub.textContent='All project actions across project blocks and streams.';statusFilter.value='';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
-function showOpenActions(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Open Actions';trackerPageSub.textContent='All actions that are not yet finished or completed.';statusFilter.value='';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
+function showTracker(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Project Tracker';trackerPageSub.textContent='All project actions across project blocks and streams.';[...statusFilter.options].forEach(o=>o.selected=false);if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
+function showOpenActions(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Open Actions';trackerPageSub.textContent='All actions that are not yet finished or completed.';[...statusFilter.options].forEach(o=>o.selected=false);if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
 function renderTimeline(){
  const levelEl=document.getElementById('tlLevel'),streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),progressEl=document.getElementById('tlProgress'),historyEl=document.getElementById('tlHistory'),grid=document.getElementById('ganttGrid');
  const milestoneEl=document.getElementById('tlMilestones');
@@ -375,8 +375,8 @@ function exportCsv(){
  const csv=[cols.join(','),...data.map(r=>cols.map(c=>'"'+String(r[c]??'').replaceAll('"','""')+'"').join(','))].join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='genio-project-control-center.csv';a.click();
 }
-function filterStatus(s){showTracker();statusFilter.value=s;refresh();window.scrollTo({top:0,behavior:'smooth'})}
-['search','phaseFilter','streamFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
+function filterStatus(s){showTracker();[...statusFilter.options].forEach(o=>o.selected=o.value===s);refresh();window.scrollTo({top:0,behavior:'smooth'})}
+['search','phaseFilter','streamFilter','raisedFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
 
 ['tlLevel','tlStream','tlOwner','tlProgress','tlHistory','tlMilestones'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
