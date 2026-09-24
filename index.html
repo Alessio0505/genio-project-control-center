@@ -120,6 +120,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <input class="search" id="search" placeholder="Search topic, raised by, owner, description…">
   <select id="phaseFilter"><option value="">All project blocks</option></select><select id="streamFilter"><option value="">All streams</option></select>
   <select id="raisedFilter"><option value="">All raised by</option></select>
+  <select id="ownerFilter"><option value="">All owners</option></select>
   <select id="statusFilter" multiple size="4" title="Select one or more statuses"><option value="">All statuses</option></select>
   <select id="prioFilter"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
   <button class="btn gold" onclick="newItem()">+ New action</button>
@@ -212,9 +213,9 @@ function filterPhase(id){phaseFilter.value=id;refresh();document.getElementById(
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function slug(s){return String(s).toLowerCase().replace(/\s+/g,'-')}
 function refresh(){
- const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
+ const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, of=ownerFilter.value, sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
  const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
- const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
+ const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!of||ownerNames(r).includes(of)||String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*;\s*|\s*,\s*/).includes(of))&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
  tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.raisedBy)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
  renderKpis(); renderStreams(); renderAttention(); renderPhases(); renderDashboardTimeline();
 }
@@ -238,6 +239,8 @@ function renderAttention(){
 function fillFilters(){ phaseFilter.innerHTML='<option value="">All project blocks</option>'+projectPhases.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
  [...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>streamFilter.add(new Option(v,v)));
  [...new Set(data.map(x=>x.status).filter(Boolean))].sort().forEach(v=>statusFilter.add(new Option(v,v)));
+ const ownerVals=[...new Set(data.flatMap(r=>String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*;\s*|\s*,\s*/).filter(Boolean)))].sort();
+ ownerVals.forEach(v=>ownerFilter.add(new Option(v,v)));
 }
 function ownerNames(r){return r.ownerIds?.length?r.ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean):String(r.owner||'').split(/\s+-\s+|\s*;\s*|\s*,\s*/).filter(Boolean)}
 function syncOwnerSelectors(r={}){
@@ -376,7 +379,7 @@ function exportCsv(){
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='genio-project-control-center.csv';a.click();
 }
 function filterStatus(s){showTracker();[...statusFilter.options].forEach(o=>o.selected=o.value===s);refresh();window.scrollTo({top:0,behavior:'smooth'})}
-['search','phaseFilter','streamFilter','raisedFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
+['search','phaseFilter','streamFilter','raisedFilter','ownerFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
 
 ['tlLevel','tlStream','tlOwner','tlProgress','tlHistory','tlMilestones'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderTimeline));
