@@ -1,0 +1,1 @@
+function user(req){const h=req.headers.get('x-ms-client-principal');if(!h)return {name:'unknown',id:'unknown'};try{const p=JSON.parse(Buffer.from(h,'base64').toString('utf8'));return {name:p.userDetails||'unknown',id:p.userId||'unknown'}}catch{return {name:'unknown',id:'unknown'}}}module.exports={user};
