@@ -414,7 +414,7 @@ function renderTimeline(){
  let min=projectStart,max=projectEnd;
  if(!showHistory)min=today>projectStart?today:projectStart;
  if(max<min)max=new Date(min);
- const alignedMin=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const days=Math.max(7,(max-alignedMin)/86400000),weeks=Math.max(1,Math.ceil(days/7)),ww=100/weeks;
+ const alignedMin=monday(min);max=new Date(monday(max));max.setUTCDate(max.getUTCDate()+7);const weeks=Math.max(1,Math.ceil((max-alignedMin)/604800000)),days=weeks*7,ww=100/weeks;
  grid.style.setProperty('--week-width',ww+'%');
  const levelName=level==='block'?'Project Blocks':level==='stream'?'Streams':'Topics';
  let head='<div class="gantt-head"><div class="gantt-label"><b>'+levelName+'</b><small>'+rows.length+' visible</small></div><div class="gantt-track">';
