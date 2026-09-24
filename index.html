@@ -140,6 +140,15 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <label>Platform access<select id="uAccess"><option value="false">No — team member only</option><option value="true">Yes — platform user</option></select></label>
  </div>
  <div class="actions"><button class="btn gold" onclick="addTeamMember()">+ Add person</button></div>
+ <div class="card" style="margin-top:18px;padding:16px">
+  <div class="eyebrow">OWNER MANAGEMENT</div><div class="section-title" style="font-size:16px;margin:4px 0 6px">Merge persons</div>
+  <div class="sub" style="margin-bottom:12px">Merge duplicate owner names into one person. Existing actions and future filters will use the selected target person.</div>
+  <div class="formgrid">
+   <label>Merge from<select id="mergeFrom"></select></label>
+   <label>Merge into<select id="mergeInto"></select></label>
+  </div>
+  <div class="actions"><button class="btn dark" onclick="mergePersons()">Merge persons</button></div>
+ </div>
  <div class="table-wrap" style="margin-top:16px"><table style="min-width:650px"><thead><tr><th>Name</th><th>Email</th><th>Function</th><th>Streams</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="teamBody"></tbody></table></div>
 </div></div>
 <div class="modal" id="modal"><div class="modalbox">
@@ -172,10 +181,16 @@ let currentId=null;
 let team=JSON.parse(localStorage.getItem('genioPCCTeam')||'[]');
 team=team.map((u,i)=>({...u,id:u.id||'USR-'+String(i+1).padStart(3,'0'),active:u.active!==false}));localStorage.setItem('genioPCCTeam',JSON.stringify(team));
 const GROUP_OWNERS=['All','BPO','Coreteam','Core team','Tech team','Project Team','Project team'];
+let ownerAliases=JSON.parse(localStorage.getItem('genioPCCOwnerAliases')||'{}');
+function canonicalOwnerName(name){
+ let n=String(name||'').trim(),seen=new Set();
+ while(n&&ownerAliases[n.toLowerCase()]&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());n=ownerAliases[n.toLowerCase()]}
+ return n;
+}
 function splitSourceOwners(v){
  const raw=String(v||'').trim();if(!raw)return[];
  if(GROUP_OWNERS.some(g=>g.toLowerCase()===raw.toLowerCase()))return [{name:raw,type:'Group'}];
- return raw.split(/\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>x.trim()).filter(Boolean).map(name=>({name,type:'Person'}));
+ return raw.split(/\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean).map(name=>({name,type:'Person'}));
 }
 function seedOwnersIntoTeam(){
  const existing=new Map(team.map(u=>[String(u.name||'').toLowerCase(),u]));
@@ -244,10 +259,10 @@ function renderAttention(){
 function fillFilters(){ phaseFilter.innerHTML='<option value="">All project blocks</option>'+projectPhases.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
  [...new Set(data.map(x=>x.stream).filter(Boolean))].sort().forEach(v=>streamFilter.add(new Option(v,v)));
  [...new Set(data.map(x=>x.status).filter(Boolean))].sort().forEach(v=>statusFilter.add(new Option(v,v)));
- const ownerVals=[...new Set(data.flatMap(r=>String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*;\s*|\s*,\s*/).filter(Boolean)))].sort();
+ const ownerVals=[...new Set(data.flatMap(r=>String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)))].sort();
  ownerVals.forEach(v=>ownerFilter.add(new Option(v,v)));
 }
-function ownerNames(r){return r.ownerIds?.length?r.ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean):String(r.owner||'').split(/\s+-\s+|\s*;\s*|\s*,\s*/).filter(Boolean)}
+function ownerNames(r){return r.ownerIds?.length?r.ownerIds.map(id=>team.find(u=>u.id===id)?.name).filter(Boolean).map(canonicalOwnerName):String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>canonicalOwnerName(x.trim())).filter(Boolean)}
 function syncOwnerSelectors(r={}){
  const active=team.filter(u=>u.active!==false),old=ownerNames(r);
  fPrimaryOwner.innerHTML='<option value="">Unassigned</option>'+active.map(u=>`<option value="${u.id}">${esc(u.name)}${u.type==='Group'?' [Group]':''}</option>`).join('');
@@ -267,19 +282,42 @@ function saveItem(){
  Object.assign(r,{phase:fPhase.value,stream:fStream.value,topic:fTopic.value,owner,ownerIds,primaryOwnerId,raisedBy:fRaised.value,priority:fPriority.value,status:fStatus.value,start:fStart.value,due:fDue.value,health:fHealth.value,description:fDesc.value,action:fAction.value});
  if(!currentId)data.push(r); localStorage.setItem('genioPCCData',JSON.stringify(data));closeModal();refresh();if(document.getElementById('timelineSection').classList.contains('show'))renderTimeline();
 }
-function openTeamAdmin(){renderTeam();teamModal.classList.add('show')}
+function openTeamAdmin(){renderTeam();renderMergeSelectors();teamModal.classList.add('show')}
 function closeTeamAdmin(){teamModal.classList.remove('show')}
 function renderTeam(){
  teamBody.innerHTML=team.map((u,i)=>`<tr><td><b>${esc(u.name)}</b> ${u.type==='Group'?'<span class="team-badge">Group</span>':''}</td><td>${esc(u.email)||'<span class="sub">Add email</span>'}</td><td>${esc(u.function)}</td><td>${esc(u.streams)}</td><td>${esc(u.role)}</td><td>${u.access?'Yes':'No'}</td><td><button class="btn" onclick="removeTeamMember(${i})">Remove</button></td></tr>`).join('')||'<tr><td colspan="7" class="sub">No team members created yet.</td></tr>';
+}
+function renderMergeSelectors(){
+ const from=document.getElementById('mergeFrom'),into=document.getElementById('mergeInto');if(!from||!into)return;
+ const people=team.filter(u=>u.active!==false&&u.type!=='Group').sort((a,b)=>a.name.localeCompare(b.name));
+ const opts='<option value="">Select person…</option>'+people.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+ from.innerHTML=opts;into.innerHTML=opts;
+}
+function mergePersons(){
+ const fromId=mergeFrom.value,toId=mergeInto.value;if(!fromId||!toId){alert('Select both persons to merge.');return}
+ if(fromId===toId){alert('Choose two different persons.');return}
+ const from=team.find(u=>u.id===fromId),to=team.find(u=>u.id===toId);if(!from||!to)return;
+ if(!confirm(`Merge "${from.name}" into "${to.name}"? All actions assigned to ${from.name} will be reassigned to ${to.name}.`))return;
+ ownerAliases[from.name.toLowerCase()]=to.name;localStorage.setItem('genioPCCOwnerAliases',JSON.stringify(ownerAliases));
+ data.forEach(r=>{
+   const parts=String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*\/\s*|\s*;\s*|\s*,\s*/).map(x=>x.trim()).filter(Boolean);
+   if(parts.some(n=>n.toLowerCase()===from.name.toLowerCase()))r.owner=[...new Set(parts.map(n=>n.toLowerCase()===from.name.toLowerCase()?to.name:canonicalOwnerName(n)))].join(' + ');
+   if(Array.isArray(r.ownerIds)){r.ownerIds=[...new Set(r.ownerIds.map(id=>id===fromId?toId:id))];if(r.primaryOwnerId===fromId)r.primaryOwnerId=toId}
+ });
+ if(!to.email&&from.email)to.email=from.email;
+ from.active=false;from.mergedInto=toId;
+ localStorage.setItem('genioPCCData',JSON.stringify(data));localStorage.setItem('genioPCCTeam',JSON.stringify(team));
+ fillFilters();fillTimelineFilters();renderTeam();renderMergeSelectors();refresh();
+ alert(`${from.name} has been merged into ${to.name}.`);
 }
 function addTeamMember(){
  const name=uName.value.trim(),email=uEmail.value.trim();
  if(!name||!email){alert('Name and email are required.');return}
  team.push({id:'USR-'+Date.now(),name,email,function:uFunction.value.trim(),streams:uStreams.value.trim(),role:uRole.value,access:uAccess.value==='true',active:true});
  localStorage.setItem('genioPCCTeam',JSON.stringify(team));
- [uName,uEmail,uFunction,uStreams].forEach(x=>x.value='');renderTeam();
+ [uName,uEmail,uFunction,uStreams].forEach(x=>x.value='');renderTeam();renderMergeSelectors();
 }
-function removeTeamMember(i){if(confirm('Remove this person?')){team.splice(i,1);localStorage.setItem('genioPCCTeam',JSON.stringify(team));renderTeam()}}
+function removeTeamMember(i){if(confirm('Remove this person?')){team.splice(i,1);localStorage.setItem('genioPCCTeam',JSON.stringify(team));renderTeam();renderMergeSelectors()}}
 function ownerEmails(r){
  if(r.ownerIds?.length)return r.ownerIds.map(id=>team.find(u=>u.id===id)?.email).filter(Boolean);
  const names=ownerNames(r).map(x=>x.toLowerCase());
