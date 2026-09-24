@@ -117,14 +117,15 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
  <section id="trackerPage" style="display:none">
  <div class="page-head"><div><div class="eyebrow" id="trackerEyebrow">PROJECT CONTROL</div><div class="section-title" id="trackerPageTitle" style="font-size:24px;margin:4px 0">Project Tracker</div><div class="sub" id="trackerPageSub">All project actions across project blocks and streams.</div></div></div>
  <div class="toolbar" id="trackerToolbar">
-  <input class="search" id="search" placeholder="Search topic, owner, description…">
+  <input class="search" id="search" placeholder="Search topic, raised by, owner, description…">
   <select id="phaseFilter"><option value="">All project blocks</option></select><select id="streamFilter"><option value="">All streams</option></select>
+  <select id="raisedFilter"><option value="">All raised by</option></select>
   <select id="statusFilter"><option value="">All statuses</option></select>
   <select id="prioFilter"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
   <button class="btn gold" onclick="newItem()">+ New action</button>
   <button class="btn dark" onclick="exportCsv()">Export CSV</button>
  </div>
- <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th>Project Block</th><th>Stream</th><th>Topic</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
+ <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th>Project Block</th><th>Stream</th><th>Topic</th><th>Raised by</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
  </section>
 </main>
 </div>
@@ -211,10 +212,10 @@ function filterPhase(id){phaseFilter.value=id;refresh();document.getElementById(
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function slug(s){return String(s).toLowerCase().replace(/\s+/g,'-')}
 function refresh(){
- const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, st=statusFilter.value, pf=prioFilter.value;
+ const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, st=statusFilter.value, pf=prioFilter.value;
  const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
- const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!st||r.status===st)&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
- tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
+ const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!st||r.status===st)&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
+ tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.raisedBy)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
  renderKpis(); renderStreams(); renderAttention(); renderPhases(); renderDashboardTimeline();
 }
 function renderKpis(){
