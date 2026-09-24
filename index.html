@@ -65,6 +65,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 .milestone-line-only{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #d32f2f;z-index:4;pointer-events:none}
 .phase-strip{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin:14px 0}.phase-progress-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:96px;box-shadow:0 1px 2px rgba(0,0,0,.025)}.phase-progress-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.phase-progress-top span{font-size:11px;font-weight:750;line-height:1.25;color:#313131}.phase-progress-top strong{font-size:20px;line-height:1;color:#171717;white-space:nowrap}.phase-progress-bar{height:6px;background:#ece9e2;border-radius:99px;overflow:hidden;margin:13px 0 8px}.phase-progress-bar i{display:block;height:100%;background:#b7944f;border-radius:99px}.phase-progress-foot{font-size:10px;color:#777}.phase-progress-foot b{font-size:11px;color:#333}@media(max-width:700px){.phase-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .project-blocks-title{margin-top:20px;margin-bottom:10px}.phase-strip{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;margin-top:0!important}.phase-progress-card{min-height:112px!important;padding:15px 16px!important}.phase-progress-top span{font-size:12px!important}.phase-progress-top strong{font-size:22px!important}.phase-progress-bar{height:7px!important;margin:16px 0 10px!important}.phase-progress-foot{font-size:11px!important}@media(max-width:1050px){.phase-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:700px){.phase-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:430px){.phase-strip{grid-template-columns:1fr!important}}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;margin:4px 0 16px}.timeline-section.show,.module-section.show,#trackerPage{width:100%}
 </style>
 </head>
 <body>
@@ -76,7 +77,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <button class="active" onclick="showDashboard()"><span class="dot">●</span>Dashboard</button>
   <button onclick="showTracker()"><span class="dot">▣</span>Project Tracker</button>
   <button onclick="showTimeline()"><span class="dot">━</span>Timeline</button>
-  <button onclick="filterStatus('Outstanding')"><span class="dot">✓</span>Open Actions</button>
+  <button onclick="showOpenActions()"><span class="dot">✓</span>Open Actions</button>
   <button onclick="showModule('milestones')"><span class="dot">◆</span>Milestones</button>
   <button onclick="showModule('raid')"><span class="dot">⚠</span>RAID</button>
   <button onclick="showModule('decisions')"><span class="dot">◇</span>Decisions</button>
@@ -113,6 +114,8 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 </div>
  <div class="gantt"><div class="gantt-grid" id="ganttGrid"></div></div></div>
  </section>
+ <section id="trackerPage" style="display:none">
+ <div class="page-head"><div><div class="eyebrow" id="trackerEyebrow">PROJECT CONTROL</div><div class="section-title" id="trackerPageTitle" style="font-size:24px;margin:4px 0">Project Tracker</div><div class="sub" id="trackerPageSub">All project actions across project blocks and streams.</div></div></div>
  <div class="toolbar" id="trackerToolbar">
   <input class="search" id="search" placeholder="Search topic, owner, description…">
   <select id="phaseFilter"><option value="">All project blocks</option></select><select id="streamFilter"><option value="">All streams</option></select>
@@ -122,6 +125,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <button class="btn dark" onclick="exportCsv()">Export CSV</button>
  </div>
  <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th>Project Block</th><th>Stream</th><th>Topic</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
+ </section>
 </main>
 </div>
 <div class="modal" id="teamModal"><div class="modalbox">
@@ -208,7 +212,8 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 function slug(s){return String(s).toLowerCase().replace(/\s+/g,'-')}
 function refresh(){
  const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, st=statusFilter.value, pf=prioFilter.value;
- const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!st||r.status===st)&&(!pf||r.priority===pf));
+ const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
+ const view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!st||r.status===st)&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
  tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
  renderKpis(); renderStreams(); renderAttention(); renderPhases(); renderDashboardTimeline();
 }
@@ -297,7 +302,7 @@ const agreedMilestones=[
 ];
 let milestonesChanged=false;agreedMilestones.forEach(m=>{const existing=moduleData.milestones.find(x=>x.name===m.name);if(!existing){moduleData.milestones.push({...m});milestonesChanged=true}else if(m.level&&!existing.level){existing.level=m.level;milestonesChanged=true}});if(milestonesChanged)localStorage.setItem('genioPCCModules',JSON.stringify(moduleData));
 let activeModule='',editModuleIndex=null;
-function hideWork(){document.getElementById('dashboardPage').style.display='none';timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='none';trackerTable.style.display='none'}
+function hideWork(){document.getElementById('dashboardPage').style.display='none';document.getElementById('trackerPage').style.display='none';timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='none';trackerTable.style.display='none'}
 function showDashboard(){hideWork();document.getElementById('dashboardPage').style.display='block';refresh();renderDashboardTimeline();window.scrollTo({top:0,behavior:'smooth'})}
 function showModule(k){hideWork();activeModule=k;moduleSection.classList.add('show');renderModule();moduleSection.scrollIntoView({behavior:'smooth'})}
 function renderModule(){const d=moduleDefs[activeModule],a=moduleData[activeModule];moduleTitle.textContent=d.title;moduleSub.textContent=d.sub;moduleAdd.textContent='+ Add '+d.prefix;moduleAdd.onclick=()=>openModuleItem();
@@ -314,8 +319,9 @@ function normalizeDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(v||'')?v:''}
 function utcDate(s){const a=s.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]))}
 function monday(d){const x=new Date(d),day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day);return x}
 function isoWeek(d){const x=new Date(d);x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
-function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();timelineSection.scrollIntoView({behavior:'smooth'})}
-function showTracker(){timelineSection.classList.remove('show');moduleSection.classList.remove('show');trackerToolbar.style.display='flex';trackerTable.style.display='block';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();trackerToolbar.scrollIntoView({behavior:'smooth'})}
+function showTimeline(){hideWork();timelineSection.classList.add('show');renderTimeline();window.scrollTo({top:0,behavior:'smooth'})}
+function showTracker(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Project Tracker';trackerPageSub.textContent='All project actions across project blocks and streams.';statusFilter.value='';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
+function showOpenActions(){hideWork();document.getElementById('trackerPage').style.display='block';trackerToolbar.style.display='flex';trackerTable.style.display='block';trackerPageTitle.textContent='Open Actions';trackerPageSub.textContent='All actions that are not yet finished or completed.';statusFilter.value='';if(!Array.isArray(data)||!data.length){data=seed.map(x=>({...x}));localStorage.setItem('genioPCCData',JSON.stringify(data));fillFilters();}refresh();window.scrollTo({top:0,behavior:'smooth'})}
 function renderTimeline(){
  const levelEl=document.getElementById('tlLevel'),streamEl=document.getElementById('tlStream'),ownerEl=document.getElementById('tlOwner'),progressEl=document.getElementById('tlProgress'),historyEl=document.getElementById('tlHistory'),grid=document.getElementById('ganttGrid');
  const milestoneEl=document.getElementById('tlMilestones');
@@ -368,7 +374,7 @@ function exportCsv(){
  const csv=[cols.join(','),...data.map(r=>cols.map(c=>'"'+String(r[c]??'').replaceAll('"','""')+'"').join(','))].join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='genio-project-control-center.csv';a.click();
 }
-function filterStatus(s){showTracker();statusFilter.value=s;refresh();trackerToolbar.scrollIntoView({behavior:'smooth'})}
+function filterStatus(s){showTracker();statusFilter.value=s;refresh();window.scrollTo({top:0,behavior:'smooth'})}
 ['search','phaseFilter','streamFilter','statusFilter','prioFilter'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
 fillFilters();fillTimelineFilters();refresh();
 
