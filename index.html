@@ -64,6 +64,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
 .milestone-track{min-height:58px;overflow:visible}.lane-marker{top:5px;bottom:5px;border-left:2px solid #d32f2f}.lane-marker:before{top:-3px}.lane-marker span{display:block;position:absolute;top:20px;left:6px;max-width:120px;padding:2px 5px;border-radius:4px;background:#fff5f5;border:1px solid #efcaca;color:#a92727;font-size:8px;font-weight:700;line-height:1.15;white-space:normal;z-index:8}.milestone-lane{min-height:58px;background:#fffafa}
 .milestone-line-only{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #d32f2f;z-index:4;pointer-events:none}
 .phase-strip{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin:14px 0}.phase-progress-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:96px;box-shadow:0 1px 2px rgba(0,0,0,.025)}.phase-progress-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.phase-progress-top span{font-size:11px;font-weight:750;line-height:1.25;color:#313131}.phase-progress-top strong{font-size:20px;line-height:1;color:#171717;white-space:nowrap}.phase-progress-bar{height:6px;background:#ece9e2;border-radius:99px;overflow:hidden;margin:13px 0 8px}.phase-progress-bar i{display:block;height:100%;background:#b7944f;border-radius:99px}.phase-progress-foot{font-size:10px;color:#777}.phase-progress-foot b{font-size:11px;color:#333}@media(max-width:700px){.phase-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.project-blocks-title{margin-top:20px;margin-bottom:10px}.phase-strip{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;margin-top:0!important}.phase-progress-card{min-height:112px!important;padding:15px 16px!important}.phase-progress-top span{font-size:12px!important}.phase-progress-top strong{font-size:22px!important}.phase-progress-bar{height:7px!important;margin:16px 0 10px!important}.phase-progress-foot{font-size:11px!important}@media(max-width:1050px){.phase-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:700px){.phase-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:430px){.phase-strip{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body>
@@ -89,6 +90,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
  <div class="top"><div><div class="eyebrow">GENIO PROJECT CONTROL CENTER</div><h1>JDE Benelux Transformation</h1><div class="sub">Business project management · Go-live February 2027</div></div><div class="avatar">AC</div></div>
  <section id="dashboardPage">
  <div class="cards" id="kpis"></div>
+ <div class="section-title project-blocks-title">Project Blocks</div>
  <div class="phase-strip" id="phaseStrip"></div>
  <div class="card dashboard-stream-card"><div class="section-title">Progress by stream</div><div class="stream-kpis" id="streams"></div></div>
  <div class="card dashboard-attention-card"><div class="section-title">Needs attention</div><div class="attn" id="attention"></div></div>
