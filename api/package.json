@@ -1,0 +1,9 @@
+{
+  "name": "genio-api",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@azure/functions": "^4.7.0",
+    "mssql": "^11.0.1"
+  }
+}
