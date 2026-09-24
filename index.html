@@ -126,7 +126,7 @@ td{padding:11px;border-bottom:1px solid #efede7;font-size:12px;vertical-align:to
   <button class="btn gold" onclick="newItem()">+ New action</button>
   <button class="btn dark" onclick="exportCsv()">Export CSV</button>
  </div>
- <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th>Project Block</th><th>Stream</th><th>Topic</th><th>Raised by</th><th>Owner</th><th>Priority</th><th><button id="dueSortBtn" type="button" onclick="toggleDueSort()" style="border:0;background:transparent;font:inherit;font-weight:inherit;cursor:pointer;padding:0">Due <span id="dueSortIcon">↕</span></button></th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
+ <div class="table-wrap" id="trackerTable"><table><thead><tr><th>ID</th><th><button id="blockSortBtn" type="button" onclick="toggleBlockSort()" style="border:0;background:transparent;font:inherit;font-weight:inherit;cursor:pointer;padding:0">Project Block <span id="blockSortIcon">↕</span></button></th><th>Stream</th><th>Topic</th><th>Raised by</th><th>Owner</th><th>Priority</th><th><button id="dueSortBtn" type="button" onclick="toggleDueSort()" style="border:0;background:transparent;font:inherit;font-weight:inherit;cursor:pointer;padding:0">Due <span id="dueSortIcon">↕</span></button></th><th>Status</th><th>Health</th></tr></thead><tbody id="tbody"></tbody></table></div>
  </section>
 </main>
 </div>
@@ -212,12 +212,14 @@ function renderPhases(){
 function filterPhase(id){phaseFilter.value=id;refresh();document.getElementById('trackerToolbar').scrollIntoView({behavior:'smooth'})}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function slug(s){return String(s).toLowerCase().replace(/\s+/g,'-')}
-let dueSort='';
-function toggleDueSort(){dueSort=dueSort==='asc'?'desc':'asc';const i=document.getElementById('dueSortIcon');if(i)i.textContent=dueSort==='asc'?'↑':'↓';refresh()}
+let dueSort='',blockSort='';
+function toggleBlockSort(){blockSort=blockSort==='asc'?'desc':'asc';dueSort='';const b=document.getElementById('blockSortIcon'),d=document.getElementById('dueSortIcon');if(b)b.textContent=blockSort==='asc'?'↑':'↓';if(d)d.textContent='↕';refresh()}
+function toggleDueSort(){dueSort=dueSort==='asc'?'desc':'asc';blockSort='';const i=document.getElementById('dueSortIcon'),b=document.getElementById('blockSortIcon');if(i)i.textContent=dueSort==='asc'?'↑':'↓';if(b)b.textContent='↕';refresh()}
 function refresh(){
  const q=document.getElementById('search').value.toLowerCase(), ph=phaseFilter.value, sf=streamFilter.value, rf=raisedFilter.value, of=ownerFilter.value, sts=[...statusFilter.selectedOptions].map(o=>o.value).filter(Boolean), pf=prioFilter.value;
  const openOnly=document.getElementById('trackerPage')?.style.display!=='none'&&document.getElementById('trackerPageTitle')?.textContent==='Open Actions';
  let view=data.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!ph||r.phase===ph)&&(!sf||r.stream===sf)&&(!rf||r.raisedBy===rf)&&(!of||ownerNames(r).includes(of)||String(r.owner||'').split(/\s+\+\s+|\s+-\s+|\s*;\s*|\s*,\s*/).includes(of))&&(!sts.length||sts.includes(r.status))&&(!pf||r.priority===pf)&&(!openOnly||!/finished|completed/i.test(r.status||'')));
+ if(blockSort){view.sort((a,b)=>{const an=parseInt(String(a.phase||'').replace(/\D/g,''),10),bn=parseInt(String(b.phase||'').replace(/\D/g,''),10);const av=Number.isNaN(an)?999:an,bv=Number.isNaN(bn)?999:bn;return blockSort==='asc'?av-bv:bv-av})}
  if(dueSort){view.sort((a,b)=>{const ad=normalizeDate(a.due),bd=normalizeDate(b.due);if(!ad&&!bd)return 0;if(!ad)return 1;if(!bd)return -1;return dueSort==='asc'?ad.localeCompare(bd):bd.localeCompare(ad)})}
  tbody.innerHTML=view.map(r=>`<tr onclick="openItem('${r.id}')"><td>${r.id}</td><td>${esc(phaseName(r.phase))}</td><td><b>${esc(r.stream)}</b></td><td>${esc(r.topic)}</td><td>${esc(r.raisedBy)}</td><td>${esc(r.owner)}</td><td><span class="pill ${slug(r.priority)}">${esc(r.priority)}</span></td><td>${esc(r.due)}</td><td><span class="pill ${slug(r.status)}">${esc(r.status)}</span></td><td class="health-${r.health.replaceAll(' ','-')}">● ${r.health}</td></tr>`).join('');
  renderKpis(); renderStreams(); renderAttention(); renderPhases(); renderDashboardTimeline();
